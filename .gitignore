@@ -138,3 +138,11 @@ $RECYCLE.BIN/
 .DS_Store
 
 _NCrunch*
+Hackathon/obj/Hackathon.csproj.nuget.dgspec.json
+Hackathon/obj/Hackathon.csproj.nuget.g.props
+Hackathon/obj/project.assets.json
+Hackathon/obj/project.nuget.cache
+Hackathon/obj/Debug/net8.0/Hackathon.AssemblyInfo.cs
+Hackathon/obj/Debug/net8.0/Hackathon.AssemblyInfoInputs.cache
+Hackathon/obj/Debug/net8.0/Hackathon.assets.cache
+Hackathon/obj/Debug/net8.0/Hackathon.GeneratedMSBuildEditorConfig.editorconfig

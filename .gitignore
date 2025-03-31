@@ -136,9 +136,8 @@ $RECYCLE.BIN/
 
 # Mac desktop service store files
 .DS_Store
-
 _NCrunch*
-Hackathon/obj/
+Hackathon/obj
 Hackathon/obj/Hackathon.csproj.nuget.dgspec.json
 Hackathon/obj/Hackathon.csproj.nuget.g.props
 Hackathon/obj/project.assets.json

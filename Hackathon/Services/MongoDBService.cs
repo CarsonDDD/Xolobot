@@ -39,7 +39,7 @@ public class MongoDBService
 			var items = await shopItemsCollection.Find(_ => true).ToListAsync();
 			return items;
 		}
-		catch(Exception ex)
+		catch (Exception ex)
 		{
 			return new List<Item> { new Item() };
 		}
@@ -70,10 +70,10 @@ public class MongoDBService
 	{
 		var playerCollection = _database.GetCollection<PlayerObject>("Players");
 		var filter = Builders<PlayerObject>.Filter.Eq("player.discordId", discordId);
-		
+
 		List<PlayerObject> players = await playerCollection.Find(filter).ToListAsync();
 
-		if(players.Count > 1) Console.WriteLine("huh, it seems discord id:'" + discordId + "' has " + players.Count + "players assosiated with them.");
+		if (players.Count > 1) Console.WriteLine("huh, it seems discord id:'" + discordId + "' has " + players.Count + "players assosiated with them.");
 
 		return players;
 	}
@@ -83,18 +83,18 @@ public class MongoDBService
 	{
 		var itemCollection = _database.GetCollection<Item>("ShopItems");
 		var item = await itemCollection.Find(i => i.name == itemName).FirstOrDefaultAsync();
-		
+
 		var playerCollection = _database.GetCollection<PlayerObject>("Players");
 		var filter = Builders<PlayerObject>.Filter.Eq("player.discordId", discordId);
 		var player = await playerCollection.Find(filter).FirstOrDefaultAsync(); // This breaks if there are multiple characters assosiated with a player.
 
-		if(item == null || player == null)
+		if (item == null || player == null)
 		{
 			// item not found
 			return -1;
 		}
 
-		if(player.treasure.gold < item.cost)
+		if (player.treasure.gold < item.cost)
 		{
 			//poor
 			return 0;

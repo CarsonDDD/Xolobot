@@ -1,25 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\uuh--uuuuh-ah--t-t-tea-hmmm-puh-puh-per-perpol-ah-ee--Repository\\Hackathon\\Hackathon.csproj": {}
+    "D:\\User Files\\Documents\\Code\\Xolobot\\Xolobot\\Hackathon\\Hackathon.csproj": {}
   },
   "projects": {
-    "C:\\uuh--uuuuh-ah--t-t-tea-hmmm-puh-puh-per-perpol-ah-ee--Repository\\Hackathon\\Hackathon.csproj": {
+    "D:\\User Files\\Documents\\Code\\Xolobot\\Xolobot\\Hackathon\\Hackathon.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\uuh--uuuuh-ah--t-t-tea-hmmm-puh-puh-per-perpol-ah-ee--Repository\\Hackathon\\Hackathon.csproj",
+        "projectUniqueName": "D:\\User Files\\Documents\\Code\\Xolobot\\Xolobot\\Hackathon\\Hackathon.csproj",
         "projectName": "Hackathon",
-        "projectPath": "C:\\uuh--uuuuh-ah--t-t-tea-hmmm-puh-puh-per-perpol-ah-ee--Repository\\Hackathon\\Hackathon.csproj",
+        "projectPath": "D:\\User Files\\Documents\\Code\\Xolobot\\Xolobot\\Hackathon\\Hackathon.csproj",
         "packagesPath": "C:\\Users\\carso\\.nuget\\packages\\",
-        "outputPath": "C:\\uuh--uuuuh-ah--t-t-tea-hmmm-puh-puh-per-perpol-ah-ee--Repository\\Hackathon\\obj\\",
+        "outputPath": "D:\\User Files\\Documents\\Code\\Xolobot\\Xolobot\\Hackathon\\obj\\",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
-          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
-        ],
         "configFilePaths": [
           "C:\\Users\\carso\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -40,6 +35,11 @@
           "warnAsError": [
             "NU1605"
           ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
         }
       },
       "frameworks": {
@@ -111,7 +111,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.101/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.400/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

@@ -17,8 +17,18 @@ public class MongoDBSettings
 	public string ConnectionString { get; set; }
 	public string DatabaseName { get; set; }
 }
+
+
 public class MongoDBService
 {
+	public enum SHOPRESULT
+	{
+		ITEM_NOT_FOUND = -3,
+		PLAYER_NOT_FOUND = -1,
+		SUCCESS = 1,
+		INSUFFICIENT_FUNDS = 0,
+		INSUFFICIENT_QUANTITY = -2,
+	}
 	private readonly IMongoDatabase _database;
 	private readonly ILogger _logger;
 
@@ -31,33 +41,87 @@ public class MongoDBService
 		_logger.LogInformation($"Connected to MongoDB {_database.DatabaseNamespace}");
 	}
 
-	public async Task<List<Item>> GetShopItems()
+	public async Task<InventoryItem> GetBaseItemAsync(ReferenceItem refItem)
+	{
+		// Access the Items collection.
+		var itemsCollection = _database.GetCollection<BaseItem>("Items");
+
+		// Retrieve the BaseItem using the ReferenceId from the ReferenceItem.
+		var filter = Builders<BaseItem>.Filter.Eq(b => b.ReferenceId, refItem.ReferenceId);
+		var baseItem = await itemsCollection.Find(filter).FirstOrDefaultAsync();
+
+		if (baseItem == null)
+		{
+			_logger.LogWarning($"BaseItem not found for ReferenceId: {refItem.ReferenceId}");
+			return null;
+		}
+
+		// Return the pair as an InventoryItem.
+		return new InventoryItem
+		{
+			BaseItem = baseItem,
+			InventoryDetails = refItem
+		};
+	}
+
+
+
+
+	public async Task<List<ReferenceItem>> GetShopItems()
 	{
 		try
 		{
-			var shopItemsCollection = _database.GetCollection<Item>("ShopItems");
+			var shopItemsCollection = _database.GetCollection<ReferenceItem>("ShopInventory");
 			var items = await shopItemsCollection.Find(_ => true).ToListAsync();
 			return items;
 		}
 		catch (Exception ex)
 		{
-			return new List<Item> { new Item() };
+			return new List<ReferenceItem> { new ReferenceItem() };
 		}
 	}
 
-	public async Task<List<Item>> GetShopItems(string searchTerm)
+	public async Task<List<InventoryItem>> GetShopItems(string searchTerm)
 	{
-		var itemCollection = _database.GetCollection<Item>("ShopItems");
+		try
+		{
+			var shopCollection = _database.GetCollection<ReferenceItem>("ShopInventory");
 
-		var nameFilter = Builders<Item>.Filter.Regex("name", new BsonRegularExpression(searchTerm, "i"));
-		var tagsFilter = Builders<Item>.Filter.Regex("tags", new BsonRegularExpression(searchTerm, "i"));
+			var pipeline = new[]
+			{
+			new BsonDocument("$lookup", new BsonDocument
+			{
+				{ "from", "Items" },
+				{ "localField", "ReferenceId" },
+				{ "foreignField", "ReferenceId" },
+				{ "as", "BaseItem" }
+			}),
+			new BsonDocument("$unwind", "$BaseItem"),
+			new BsonDocument("$match", new BsonDocument("$or", new BsonArray
+			{
+				new BsonDocument("BaseItem.Name", new BsonDocument("$regex", searchTerm).Add("options", "i")),
+				new BsonDocument("BaseItem.Tags", new BsonDocument("$regex", searchTerm).Add("options", "i"))
+			}))
+		};
 
-		var combinedFilter = Builders<Item>.Filter.Or(nameFilter, tagsFilter);
+			var aggregate = shopCollection.Aggregate<BsonDocument>(pipeline);
+			var results = await aggregate.ToListAsync();
 
-		List<Item> items = await itemCollection.Find(combinedFilter).ToListAsync();
+			var shopItems = results.Select(doc => new ShopItem
+			{
+				BaseItem = MongoDB.Bson.Serialization.BsonSerializer.Deserialize<BaseItem>(doc["BaseItem"].AsBsonDocument),
+				InventoryDetails = MongoDB.Bson.Serialization.BsonSerializer.Deserialize<ReferenceItem>(doc)
+			}).ToList();
 
-		return items;
+			return shopItems;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, $"Error retrieving shop items with search term: {searchTerm}");
+			return new List<ShopItem>();
+		}
 	}
+
 
 	public async Task<List<PlayerObject>> GetAllPlayers()
 	{
@@ -79,38 +143,77 @@ public class MongoDBService
 	}
 
 
-	public async Task<int> BuyItem(string discordId, string itemName)
+	public async Task<SHOPRESULT> BuyItem(string discordId, string referenceId, int quantity = 1)
 	{
-		var itemCollection = _database.GetCollection<Item>("ShopItems");
-		var item = await itemCollection.Find(i => i.name == itemName).FirstOrDefaultAsync();
+		if (quantity <= 0) return SHOPRESULT.INSUFFICIENT_QUANTITY;
 
+		// Suppose "ShopInventory" is a collection of ReferenceItem documents, 
+		var shopCollection = _database.GetCollection<ReferenceItem>("ShopInventory");
+		var shopItem = await shopCollection
+			.Find(s => s.Item.ReferenceId == referenceId)
+			.FirstOrDefaultAsync();
+
+		if (shopItem == null) return SHOPRESULT.ITEM_NOT_FOUND;
+		if (shopItem.Quantity < quantity) return SHOPRESULT.INSUFFICIENT_QUANTITY;
+
+		// Get the player
 		var playerCollection = _database.GetCollection<PlayerObject>("Players");
-		var filter = Builders<PlayerObject>.Filter.Eq("player.discordId", discordId);
-		var player = await playerCollection.Find(filter).FirstOrDefaultAsync(); // This breaks if there are multiple characters assosiated with a player.
+		var playerFilter = Builders<PlayerObject>.Filter.Eq("player.discordId", discordId);
+		var player = await playerCollection.Find(playerFilter).FirstOrDefaultAsync();
 
-		if (item == null || player == null)
+		if (player == null) return SHOPRESULT.PLAYER_NOT_FOUND;
+
+		// Check cost
+		var totalCost = shopItem.Cost * quantity;
+		if (player.treasure.gold < totalCost) return SHOPRESULT.INSUFFICIENT_FUNDS;
+
+		// Deduct player gold
+		var newGoldAmount = player.treasure.gold - totalCost;
+
+		// Add or update player's inventory
+		var existing = player.inventory.FirstOrDefault(
+			x => x.Item.ReferenceId == referenceId
+		);
+		if (existing != null)
 		{
-			// item not found
-			return -1;
+			existing.Quantity += quantity;
+		}
+		else
+		{
+			// Add a new entry copying the BaseItem and cost, but overriding quantity
+			player.inventory.Add(new ReferenceItem
+			{
+				Item = shopItem.Item,
+				Cost = shopItem.Cost,    // or use BaseItem.BaseCost if you want
+				Quantity = quantity
+			});
 		}
 
-		if (player.treasure.gold < item.cost)
-		{
-			//poor
-			return 0;
-		}
-
-		// Update gold and inv
+		// Update the player's doc
 		var updatePlayer = Builders<PlayerObject>.Update
-			.Push("inventory", item)
-			.Set(p => p.treasure.gold, player.treasure.gold - item.cost);
+			.Set(p => p.treasure.gold, newGoldAmount)
+			.Set(p => p.inventory, player.inventory);
 
 		await playerCollection.UpdateOneAsync(filter, updatePlayer);
 
-		// Update shop
-		var deleteFilter = Builders<Item>.Filter.Eq("name", itemName);
-		await itemCollection.DeleteOneAsync(deleteFilter);
+		// Update (or remove) the shop item
+		var newShopQuantity = shopItem.Quantity - quantity;
+		if (newShopQuantity <= 0)
+		{
+			// Remove the item from the shop entirely if it hits zero
+			await shopCollection.DeleteOneAsync(s => s.Item.ReferenceId == referenceId);
+		}
+		else
+		{
+			// Decrement the existing shop quantity
+			var updateShop = Builders<ReferenceItem>.Update
+				.Set(s => s.Quantity, newShopQuantity);
+			await shopCollection.UpdateOneAsync(
+				s => s.Item.ReferenceId == referenceId,
+				updateShop
+			);
+		}
 
-		return 1;
+		return SHOPRESULT.SUCCESS;
 	}
 }

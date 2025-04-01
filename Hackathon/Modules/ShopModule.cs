@@ -19,7 +19,7 @@ public class ShopModule : ModuleBase
 
 
 	#region GUI INTERACTION
-	[SlashCommand("open", "Opens Shop")]
+	[SlashCommand("open", "View a compact list of every item in the shop.")]
 	public async Task ShopCommand()
 	{
 		await DeferAsync();// stops error messages when there isnt an error
@@ -27,7 +27,7 @@ public class ShopModule : ModuleBase
 		await FollowupAsync("hmmmmmmmmmmmm");// stops the indefinate "* * * xolobot is thinking..."
 	}
 
-	[SlashCommand("view", "same as search")]
+	[SlashCommand("view", "Search items in stock by category (same as search.)")]
 	public async Task ViewCommand(
 		[Summary("query", "items with names and tags containing")]
 		string searchTerm)
@@ -37,7 +37,7 @@ public class ShopModule : ModuleBase
 		await FollowupAsync("hmmmmmmmmmmmm");// stops the indefinate "* * * xolobot is thinking..."
 	}
 
-	[SlashCommand("search", "search specifc items")]
+	[SlashCommand("search", "View items in stock by category (same as view.)")]
 	public async Task SearchCommand(
 	[Summary("query", "items with names and tags containing")]
 		string searchTerm)
@@ -54,7 +54,9 @@ public class ShopModule : ModuleBase
 	[Summary("item", "The name of the item to buy")] string itemName,
 	[Summary("quantity", "The number of items to purchase")] int quantity)
 	{
-
+		await DeferAsync();
+		await ProcessBuy(Context.Channel, itemName, quantity, Context.User);
+		await FollowupAsync("Purchase processed!");
 	}
 
 	[SlashCommand("sell", "Sell item(s) directly")]
@@ -62,7 +64,9 @@ public class ShopModule : ModuleBase
 		[Summary("item", "The name of the item to sell")] string itemName,
 		[Summary("quantity", "The number of items to sell")] int quantity)
 	{
-
+		await DeferAsync();
+		await ProcessSell(Context.Channel, itemName, quantity, Context.User);
+		await FollowupAsync("Sale processed!");
 	}
 	#endregion
 
@@ -89,11 +93,41 @@ public class ShopModule : ModuleBase
 	{
 		// specific
 		var items = await _database.GetShopItems(searchTerm);
+		if (items.Count == 0)
+		{
+			await location.SendMessageAsync($"No items found for '{searchTerm}'.");
+			return;
+		}
 		await ShopManager.Instance.ShowItemPage(location, searchTerm, 0, items, Context.User);
 	}
 
-	private void ProcessBuy() { }
-	private void ProcessSell() { }
+	public async Task<string> ProcessBuyItem(MongoDBService database, string itemName, int quantity, SocketUser user)
+	{
+		int successfulPurchases = 0;
+		for (int i = 0; i < quantity; i++)
+		{
+			int result = await database.BuyItem(user.Id.ToString(), itemName);
+			if (result == 1)
+			{
+				successfulPurchases++;
+			}
+			else if (result == 0)
+			{
+				return "Insufficient funds to purchase the item.";
+			}
+			else
+			{
+				return "An error occurred during the purchase process.";
+			}
+		}
+		return $"<@{user.Id}> successfully purchased {quantity} of **{itemName}**.";
+	}
+
+
+	private async Task ProcessSell(ISocketMessageChannel location, string itemName, int quantity, SocketUser user)
+	{
+
+	}
 	private void ProcessHagle() { }
 
 	#endregion

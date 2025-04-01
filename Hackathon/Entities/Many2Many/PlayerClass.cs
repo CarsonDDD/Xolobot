@@ -1,4 +1,4 @@
-namespace Hackathon.DataBaseObjects.Many2Many;
+namespace Hackathon.Entities;
 
 public class PlayerClass
 {

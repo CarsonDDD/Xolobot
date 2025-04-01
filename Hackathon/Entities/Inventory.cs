@@ -1,8 +1,8 @@
 namespace Hackathon.Entities;
 
-public class PlayerProficiency
+public class Inventory
 {
+    public int Id { get; set; }
     public int Player_Id { get; set; }
-    public int Proficiency_Id { get; set; }
 }
 

@@ -1,4 +1,4 @@
-namespace Hackathon.DataBaseObjects;
+namespace Hackathon.Entities;
 
 public class Tag
 {

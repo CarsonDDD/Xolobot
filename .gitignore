@@ -163,3 +163,5 @@ Hackathon/obj/Debug/net8.0/Hackathon.pdb
 Hackathon/obj/Debug/net8.0/Hackathon.sourcelink.json
 Hackathon/obj/Debug/net8.0/ref/Hackathon.dll
 Hackathon/obj/Debug/net8.0/refint/Hackathon.dll
+xolobot.db
+xolobotSchema.sqlite

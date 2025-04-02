@@ -1,16 +1,9 @@
-﻿using Discord;
-using Discord.Interactions;
+﻿using Discord.Interactions;
 using Discord.WebSocket;
-using Hackathon.Managers.Shop;
+using Hackathon.Managers;
+using Hackathon.Managers.Inventory;
 using Hackathon.Services;
 using Microsoft.Extensions.Logging;
-using MongoDB.Bson;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Hackathon.Modules;
 
@@ -21,69 +14,54 @@ public class PlayerModule : ModuleBase
 	{
 	}
 
-
 	[SlashCommand("profile", "Show your profile")]
 	public async Task GetProfile()
 	{
-		var discordId = Context.User.Id.ToString();
-		var player = _playerService.GetByDiscordId(discordId);
-		if (player == null)
+		await DeferAsync(ephemeral: true);
+
+		var embed = PlayerProfileManager.Instance.BuildProfileEmbed(
+			Context.User,
+			_profileService,
+			_playerService
+		);
+
+		if (embed == null)
 		{
-			await RespondAsync("You do not exist in the system.");
+			await FollowupAsync("You are not registered.", ephemeral: true);
 			return;
 		}
 
-		var profile = _profileService.GetProfile(player.Id);
-		if (profile == null)
-		{
-			await RespondAsync("Failed to load profile.");
-			return;
-		}
-
-		var embed = new EmbedBuilder()
-			.WithTitle($"{profile.Player.Name}'s Profile")
-			.AddField("Gold", profile.Player.Gold.ToString())
-			.AddField("Classes", string.Join(", ", profile.Classes.Select(c => c.Label)))
-			.AddField("Races", string.Join(", ", profile.Races.Select(r => r.Label)))
-			.AddField("Languages", string.Join(", ", profile.Languages.Select(l => l.Label)))
-			.AddField("Proficiencies", string.Join(", ", profile.Proficiencies.Select(p => p.Label)))
-			.AddField("Stats", string.Join("\n", profile.Stats.Select(s => $"{s.Label}: {s.Value}")))
-			.WithColor(Color.Blue);
-
-		await RespondAsync(embed: embed.Build());
+		await ModifyOriginalResponseAsync(msg => msg.Embed = embed);
 	}
-
 
 	[SlashCommand("inventory", "Display your inventory")]
-	public async Task GetInventory()
+	public async Task GetInventory(string? filter = null)
 	{
-		var discordId = Context.User.Id.ToString();
-		var player = _playerService.GetByDiscordId(discordId);
-		if (player == null)
+		await DeferAsync(ephemeral: false);// can be either
+
+		var result = InventoryManager.Instance.BuildInventoryPage(
+			Context.User,
+			pageIndex: 0,
+			_profileService,
+			_playerService,
+			filter
+		);
+
+		if (result == null)
 		{
-			await RespondAsync("You do not exist in the system.");
+			await FollowupAsync("You have no inventory or nothing matches the search.", ephemeral: true);
 			return;
 		}
 
-		var profile = _profileService.GetProfile(player.Id);
-		if (profile == null || profile.Inventory == null)
+		var (embed, components) = result.Value;
+
+		await ModifyOriginalResponseAsync(msg =>
 		{
-			await RespondAsync("No inventory found.");
-			return;
-		}
-
-		var embed = new EmbedBuilder()
-			.WithTitle($"{profile.Player.Name}'s Inventory")
-			.WithColor(Color.DarkGreen);
-
-		foreach (var item in profile.Inventory.Items)
-		{
-			string tagStr = item.Tags.Count > 0 ? string.Join(", ", item.Tags.Select(t => t.Label)) : "None";
-			embed.AddField(item.Item.Name, $"Cost: {item.Item.BaseCost} | Weight: {item.Item.Weight}\nTags: {tagStr}", false);
-		}
-
-		await RespondAsync(embed: embed.Build());
+			msg.Embed = embed;
+			msg.Components = components;
+		});
 	}
+
 
 	/*private void ShowPlayerEmbed(ISocketMessageChannel location, PlayerObject player)
 	{

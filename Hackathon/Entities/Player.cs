@@ -9,5 +9,6 @@ public class Player
     public int ProficiencyBonus { get; set; }
     public int Gold { get; set; }
     public string? DiscordId { get; set; }
+    public string? ImgUrl { get; set; }
 }
 

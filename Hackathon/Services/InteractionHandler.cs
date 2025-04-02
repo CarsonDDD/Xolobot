@@ -1,6 +1,7 @@
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Hackathon.Managers.Inventory;
 using Hackathon.Managers.Shop;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
@@ -25,13 +26,14 @@ public class InteractionHandler
 	private readonly IServiceProvider _services;
 	private readonly ILogger _logger;
 	private readonly OpenAIService _openAiService;
-
 	private readonly DatabaseService _database;
+	private readonly PlayerService _playerService;
+	private readonly PlayerProfileService _profileService;
 
 	public delegate void BotResponseEvent(object sender, BotResponseArgs e);
 	public event BotResponseEvent? OnPostBotMention;
 
-	public InteractionHandler(DiscordSocketClient client, InteractionService interactionService, IServiceProvider services, ILogger<InteractionHandler> logger, OpenAIService openAiService, DatabaseService dbService)
+	public InteractionHandler(DiscordSocketClient client, InteractionService interactionService, IServiceProvider services, ILogger<InteractionHandler> logger, OpenAIService openAiService, DatabaseService dbService, PlayerService playerService, PlayerProfileService profileService)
 	{
 		_interactionService = interactionService;
 		_client = client;
@@ -39,6 +41,8 @@ public class InteractionHandler
 		_logger = logger;
 		_openAiService = openAiService;
 		_database = dbService;
+		_playerService = playerService;
+		_profileService = profileService;
 
 		// events
 		_client.ButtonExecuted += ButtonHandler;
@@ -80,20 +84,55 @@ public class InteractionHandler
 	private async Task ButtonHandler(SocketMessageComponent component)
 	{
 		Console.Out.WriteLine(component.User.GlobalName + ": " + component.Data.CustomId);
-		// Shop nav
-		if (component.Data.CustomId.Contains("shop_page_"))
+		// Inv nav
+		if (component.Data.CustomId.StartsWith("inventory_page_") ||
+		component.Data.CustomId.StartsWith("inventory_filtered_"))
 		{
-			await HandleShopNavigation(component);
-		}
-		else if (component.Data.CustomId.Contains("item_page_"))
-		{
-			await HandleItemNavigation(component);
-		}
-		else if (component.Data.CustomId.Contains("shop_buy_"))
-		{
-			await HandleBuyItem(component);
+			await HandleInventoryPage(component);
 		}
 	}
+
+	private async Task HandleInventoryPage(SocketMessageComponent component)
+	{
+		var parts = component.Data.CustomId.Split('_');
+		if (parts.Length < 4) return;
+
+		string type = parts[1];
+		string? filter = type == "filtered" ? parts[2] : null;
+
+		int pageIndexOffset = type == "filtered" ? 4 : 3;
+		if (!int.TryParse(parts[pageIndexOffset], out int page)) return;
+
+		ulong userId;
+		if (!ulong.TryParse(type == "filtered" ? parts[3] : parts[2], out userId)) return;
+
+		var user = component.User;
+
+		var result = InventoryManager.Instance.BuildInventoryPage(
+			user,
+			page,
+			_profileService,
+			_playerService,
+			filter
+		);
+
+		if (result == null)
+		{
+			await component.RespondAsync("No matching items.", ephemeral: true);
+			return;
+		}
+
+		var (embed, components) = result.Value;
+
+		await component.UpdateAsync(msg =>
+		{
+			msg.Embed = embed;
+			msg.Components = components;
+		});
+	}
+
+
+
 
 	private async Task HandleBuyItem(SocketMessageComponent component)
 	{
@@ -125,25 +164,6 @@ public class InteractionHandler
 
 		await component.DeferAsync();// stops crashing?
 	}
-
-	private async Task HandleItemNavigation(SocketMessageComponent component)
-	{
-		// 2 is search term
-		// 3 is page
-		string[] parts = component.Data.CustomId.Split('_');
-		if (parts.Length < 4) return;
-		if (!int.TryParse(parts[3], out int page)) return;
-
-		String searchTerm = parts[2];
-
-		//var items = await _database.GetShopItems();
-
-		// modify shop menu with new page
-		//await ShopManager.Instance.ShowItemPage(component.Channel, searchTerm, page, items, component.User, (IUserMessage)component.Message);
-
-		await component.DeferAsync();// stops crashing?
-	}
-
 
 
 	// ai response

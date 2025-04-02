@@ -1,20 +1,12 @@
-﻿using Discord.Interactions;
-using Discord.WebSocket;
-using Hackathon.DataObjects;
-using Hackathon.Modules;
+﻿using Discord.WebSocket;
 using Hackathon.Services;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static Hackathon.Services.InteractionHandler;
 
 namespace Hackathon.Modules;
 public class TalkingModule : ModuleBase
 {
-	public TalkingModule(ILogger<ModuleBase> logger, MongoDBService mongoDbService, OpenAIService openAIService, DiscordSocketClient client, InteractionHandler interaction) : base(logger, mongoDbService, openAIService, client, interaction)
+	public TalkingModule(ILogger<ModuleBase> logger, DatabaseService sqliteDbService, PlayerService playerService, PlayerProfileService profileService, OpenAIService openAIService, DiscordSocketClient client, InteractionHandler interaction) : base(logger, sqliteDbService, playerService, profileService, openAIService, client, interaction)
 	{
 		interaction.OnPostBotMention += ScanAIResponse;
 	}
@@ -22,9 +14,9 @@ public class TalkingModule : ModuleBase
 	private async void ScanAIResponse(Object sender, BotResponseArgs args)
 	{
 		string response = args.Response!.ToLower();
-        // scan output from ai
-        // able to change it in args
-        //await Console.Out.WriteLineAsync("YOOO");
-    }
+		// scan output from ai
+		// able to change it in args
+		//await Console.Out.WriteLineAsync("YOOO");
+	}
 
 }

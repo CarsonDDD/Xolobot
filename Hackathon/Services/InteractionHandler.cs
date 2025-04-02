@@ -21,50 +21,54 @@ public class InteractionHandler
 	}
 
 	private readonly DiscordSocketClient _client;
-    private readonly InteractionService _interactionService;
-    private readonly IServiceProvider _services;
-    private readonly ILogger _logger;
+	private readonly InteractionService _interactionService;
+	private readonly IServiceProvider _services;
+	private readonly ILogger _logger;
 	private readonly OpenAIService _openAiService;
-	private readonly MongoDBService _database;
+
+	private readonly DatabaseService _database;
 
 	public delegate void BotResponseEvent(object sender, BotResponseArgs e);
 	public event BotResponseEvent? OnPostBotMention;
 
-	public InteractionHandler(DiscordSocketClient client, InteractionService interactionService, IServiceProvider services, ILogger<InteractionHandler> logger, OpenAIService openAiService, MongoDBService mongoService)
-    {
-        _interactionService = interactionService;
-        _client = client;
-        _services = services;
-        _logger = logger;
-        _openAiService = openAiService;
-		_database = mongoService;
+	public InteractionHandler(DiscordSocketClient client, InteractionService interactionService, IServiceProvider services, ILogger<InteractionHandler> logger, OpenAIService openAiService, DatabaseService dbService)
+	{
+		_interactionService = interactionService;
+		_client = client;
+		_services = services;
+		_logger = logger;
+		_openAiService = openAiService;
+		_database = dbService;
 
 		// events
 		_client.ButtonExecuted += ButtonHandler;
-    }
+	}
 
 	public async Task InitializeAsync()
-    {
-        await _interactionService.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
+	{
+		await _interactionService.AddModulesAsync(Assembly.GetEntryAssembly(), _services);
 
-        //_logger.LogInformation("Testing loging");
+		//_logger.LogInformation("Testing loging");
 		// Logging the loaded modules
-		foreach(var module in _interactionService.Modules) {
+		foreach (var module in _interactionService.Modules)
+		{
 			_logger.LogInformation($"Loaded command module: {module.Name}");
 		}
 
-        _client.MessageReceived += HandleMessageReceived;
+		_client.MessageReceived += HandleMessageReceived;
 		_client.InteractionCreated += HandleInteraction;
-        _interactionService.InteractionExecuted += HandleInteractionExecuted;
-    }
+		_interactionService.InteractionExecuted += HandleInteractionExecuted;
+	}
 
-	private async Task HandleMessageReceived(SocketMessage message) 
+	private async Task HandleMessageReceived(SocketMessage message)
 	{
-		if(message is SocketUserMessage userMessage && userMessage.MentionedUsers.Any(user => user.Id == _client.CurrentUser.Id)) {
+		if (message is SocketUserMessage userMessage && userMessage.MentionedUsers.Any(user => user.Id == _client.CurrentUser.Id))
+		{
 			// Only mentions towards the bot, anywhere
 			String response = await HandleMention(userMessage);
 
-			if(!string.IsNullOrEmpty(response)) {
+			if (!string.IsNullOrEmpty(response))
+			{
 				OnPostBotMention?.Invoke(this, new BotResponseArgs(message, response));
 			}
 			//await Console.Out.WriteLineAsync("Mention TEst");
@@ -75,17 +79,17 @@ public class InteractionHandler
 
 	private async Task ButtonHandler(SocketMessageComponent component)
 	{
-        Console.Out.WriteLine(component.User.GlobalName + ": "+component.Data.CustomId);
-        // Shop nav
-        if (component.Data.CustomId.Contains("shop_page_"))
+		Console.Out.WriteLine(component.User.GlobalName + ": " + component.Data.CustomId);
+		// Shop nav
+		if (component.Data.CustomId.Contains("shop_page_"))
 		{
 			await HandleShopNavigation(component);
 		}
-		else if(component.Data.CustomId.Contains("item_page_"))
+		else if (component.Data.CustomId.Contains("item_page_"))
 		{
 			await HandleItemNavigation(component);
 		}
-		else if(component.Data.CustomId.Contains("shop_buy_"))
+		else if (component.Data.CustomId.Contains("shop_buy_"))
 		{
 			await HandleBuyItem(component);
 		}
@@ -94,7 +98,7 @@ public class InteractionHandler
 	private async Task HandleBuyItem(SocketMessageComponent component)
 	{
 		string[] parts = component.Data.CustomId.Split('_');
-		if(parts.Length < 4) return;
+		if (parts.Length < 4) return;
 		//if(!int.TryParse(parts[3], out int page)) return;
 		// 2 is item name
 		string itemName = parts[2];
@@ -102,7 +106,7 @@ public class InteractionHandler
 
 		//await component.RespondAsync($@"<@{component.User.Id}> attempted to buy item: {itemName}");
 
-		ShopManager.Instance.BuyItem(component, itemName, _database);
+		//ShopManager.Instance.BuyItem(component, itemName, _database);
 
 		//await component.DeferAsync();// stops crashing?
 	}
@@ -111,13 +115,13 @@ public class InteractionHandler
 	private async Task HandleShopNavigation(SocketMessageComponent component)
 	{
 		string[] parts = component.Data.CustomId.Split('_');
-		if(parts.Length < 3) return;
-		if(!int.TryParse(parts[2], out int page)) return;
+		if (parts.Length < 3) return;
+		if (!int.TryParse(parts[2], out int page)) return;
 
-		var items = await _database.GetShopItems();
+		//var items = await _database.GetShopItems();
 
 		// modify shop menu with new page
-		await ShopManager.Instance.ShowShopPage(component.Channel, page, items, (IUserMessage)component.Message);
+		//await ShopManager.Instance.ShowShopPage(component.Channel, page, items, (IUserMessage)component.Message);
 
 		await component.DeferAsync();// stops crashing?
 	}
@@ -127,15 +131,15 @@ public class InteractionHandler
 		// 2 is search term
 		// 3 is page
 		string[] parts = component.Data.CustomId.Split('_');
-		if(parts.Length < 4) return;
-		if(!int.TryParse(parts[3], out int page)) return;
+		if (parts.Length < 4) return;
+		if (!int.TryParse(parts[3], out int page)) return;
 
 		String searchTerm = parts[2];
 
-		var items = await _database.GetShopItems();
+		//var items = await _database.GetShopItems();
 
 		// modify shop menu with new page
-		await ShopManager.Instance.ShowItemPage(component.Channel, searchTerm, page, items, component.User, (IUserMessage)component.Message);
+		//await ShopManager.Instance.ShowItemPage(component.Channel, searchTerm, page, items, component.User, (IUserMessage)component.Message);
 
 		await component.DeferAsync();// stops crashing?
 	}
@@ -145,7 +149,7 @@ public class InteractionHandler
 	// ai response
 	private async Task<String> HandleMention(SocketMessage message)
 	{
-		if(message.Author.IsBot) return "";
+		if (message.Author.IsBot) return "";
 
 		var channel = message.Channel;
 		var cancellationTokenSource = new CancellationTokenSource();
@@ -154,13 +158,16 @@ public class InteractionHandler
 		// Start typing in a separate task
 		var typingTask = Task.Run(async () =>
 		{
-			try {
-				while(!token.IsCancellationRequested) {
+			try
+			{
+				while (!token.IsCancellationRequested)
+				{
 					await channel.TriggerTypingAsync();
 					await Task.Delay(1000, token);
 				}
 			}
-			catch(TaskCanceledException) {
+			catch (TaskCanceledException)
+			{
 				// Do nothing
 			}
 		}, token);
@@ -196,91 +203,96 @@ public class InteractionHandler
 
 	private async Task SendResponseInChunks(ISocketMessageChannel channel, string[] chunks, SocketMessage originalMessage = null)
 	{
-		foreach(string chunk in chunks) {
+		foreach (string chunk in chunks)
+		{
 
-			String modchunk = "> " + chunk.Replace("Xolobot: ","").Replace("Xolobob: ", "").Replace("\n", "\n> ");
+			String modchunk = "> " + chunk.Replace("Xolobot: ", "").Replace("Xolobob: ", "").Replace("\n", "\n> ");
 
-			if(originalMessage != null) {
+			if (originalMessage != null)
+			{
 				await (originalMessage as IUserMessage).ReplyAsync(modchunk, allowedMentions: new AllowedMentions(AllowedMentionTypes.None));
 			}
-			else {
+			else
+			{
 				await channel.SendMessageAsync(modchunk);
 			}
 		}
 	}
 
 	private async Task HandleInteraction(SocketInteraction interaction)
-    {
-        try
-        {
-            if(interaction is SocketSlashCommand) {
+	{
+		try
+		{
+			if (interaction is SocketSlashCommand)
+			{
 				var context = new SocketInteractionContext(_client, interaction);
 
 				var result = await _interactionService.ExecuteCommandAsync(context, _services);
 
-				if(!result.IsSuccess)
+				if (!result.IsSuccess)
 					_ = Task.Run(() => HandleInteractionExecutionResult(interaction, result));// logs output
 
 
 			}
-			else if(interaction is SocketMessageComponent messageComponent) {
-                //_logger.LogInformation("Mention test");
-                await Console.Out.WriteLineAsync("Mention TEst");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, ex.Message);
-        }
-    }
+			else if (interaction is SocketMessageComponent messageComponent)
+			{
+				//_logger.LogInformation("Mention test");
+				await Console.Out.WriteLineAsync("Mention TEst");
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, ex.Message);
+		}
+	}
 
-    private Task HandleInteractionExecuted(ICommandInfo command, IInteractionContext context, IResult result)
-    {
-        if (!result.IsSuccess)
-            _ = Task.Run(() => HandleInteractionExecutionResult(context.Interaction, result));
-        return Task.CompletedTask;
-    }
+	private Task HandleInteractionExecuted(ICommandInfo command, IInteractionContext context, IResult result)
+	{
+		if (!result.IsSuccess)
+			_ = Task.Run(() => HandleInteractionExecutionResult(context.Interaction, result));
+		return Task.CompletedTask;
+	}
 
-    private async Task HandleInteractionExecutionResult(IDiscordInteraction interaction, IResult result)
-    {
-        switch (result.Error)
-        {
-            case InteractionCommandError.UnmetPrecondition:
-                _logger.LogInformation($"Unmet precondition - {result.Error}");
-                break;
+	private async Task HandleInteractionExecutionResult(IDiscordInteraction interaction, IResult result)
+	{
+		switch (result.Error)
+		{
+			case InteractionCommandError.UnmetPrecondition:
+				_logger.LogInformation($"Unmet precondition - {result.Error}");
+				break;
 
-            case InteractionCommandError.BadArgs:
-                _logger.LogInformation($"Unmet precondition - {result.Error}");
-                break;
+			case InteractionCommandError.BadArgs:
+				_logger.LogInformation($"Unmet precondition - {result.Error}");
+				break;
 
-            case InteractionCommandError.ConvertFailed:
-                _logger.LogInformation($"Convert Failed - {result.Error}");
-                break;
+			case InteractionCommandError.ConvertFailed:
+				_logger.LogInformation($"Convert Failed - {result.Error}");
+				break;
 
-            case InteractionCommandError.Exception:
-                _logger.LogInformation($"Exception - {result.Error}");
-                break;
+			case InteractionCommandError.Exception:
+				_logger.LogInformation($"Exception - {result.Error}");
+				break;
 
-            case InteractionCommandError.ParseFailed:
-                _logger.LogInformation($"Parse Failed - {result.Error}");
-                break;
+			case InteractionCommandError.ParseFailed:
+				_logger.LogInformation($"Parse Failed - {result.Error}");
+				break;
 
-            case InteractionCommandError.UnknownCommand:
-                _logger.LogInformation($"Unknown Command - {result.Error}");
-                break;
+			case InteractionCommandError.UnknownCommand:
+				_logger.LogInformation($"Unknown Command - {result.Error}");
+				break;
 
-            case InteractionCommandError.Unsuccessful:
-                _logger.LogInformation($"Unsuccessful - {result.Error}");
-                break;
-        }
+			case InteractionCommandError.Unsuccessful:
+				_logger.LogInformation($"Unsuccessful - {result.Error}");
+				break;
+		}
 
-        if (!interaction.HasResponded)
-        {
-            await interaction.RespondAsync("An error has occurred. We are already investigating it!", ephemeral: true);
-        }
-        else
-        {
-            await interaction.FollowupAsync("An error has occurred. We are already investigating it!", ephemeral: true);
-        }
-    }
+		if (!interaction.HasResponded)
+		{
+			await interaction.RespondAsync("An error has occurred. We are already investigating it!", ephemeral: true);
+		}
+		else
+		{
+			await interaction.FollowupAsync("An error has occurred. We are already investigating it!", ephemeral: true);
+		}
+	}
 }

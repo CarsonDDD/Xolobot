@@ -7,17 +7,30 @@ namespace Hackathon.Modules;
 public abstract class ModuleBase : InteractionModuleBase<SocketInteractionContext>
 {
 	protected readonly ILogger<ModuleBase> _logger;
-	protected readonly MongoDBService _database;
 	protected readonly OpenAIService _openAI;
 	protected readonly DiscordSocketClient _client;
 	protected readonly InteractionHandler _interaction;
 
-	public ModuleBase(ILogger<ModuleBase> logger, MongoDBService mongoDbService, OpenAIService openAIService, DiscordSocketClient client, InteractionHandler interaction)
+	protected readonly DatabaseService _sqliteDatabase;
+	protected readonly PlayerService _playerService;
+	protected readonly PlayerProfileService _profileService;
+
+	public ModuleBase(
+		ILogger<ModuleBase> logger,
+		DatabaseService sqliteDbService,
+		PlayerService playerService,
+		PlayerProfileService profileService,
+		OpenAIService openAIService,
+		DiscordSocketClient client,
+		InteractionHandler interaction)
 	{
 		_logger = logger;
-		_database = mongoDbService;
+		_sqliteDatabase = sqliteDbService;
+		_playerService = playerService;
+		_profileService = profileService;
 		_openAI = openAIService;
 		_client = client;
+		_interaction = interaction;
 	}
 
 	/*[SlashCommand("test", "Just a test command")]

@@ -1,13 +1,11 @@
 ﻿using Discord.WebSocket;
 using Discord;
-using Hackathon.DataObjects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Discord.Interactions;
-using Hackathon.DataObjects.PlayerAdditions;
 
 // Singleton
 namespace Hackathon.Managers.Shop;
@@ -17,8 +15,10 @@ public class PlayerManager
 	private PlayerManager() { }
 	public static PlayerManager Instance
 	{
-		get{
-			if(_instance == null){
+		get
+		{
+			if (_instance == null)
+			{
 				_instance = new PlayerManager();
 			}
 
@@ -26,7 +26,7 @@ public class PlayerManager
 		}
 	}
 
-    public async Task ShowPlayerPage(ISocketMessageChannel location, PlayerObject player, IUserMessage existingMessage = null)
+	/*public async Task ShowPlayerPage(ISocketMessageChannel location, PlayerObject player, IUserMessage existingMessage = null)
 	{
 		EmbedBuilder window = new EmbedBuilder()
 			.WithTitle(player.player.characterName);
@@ -44,5 +44,5 @@ public class PlayerManager
 		}
 
 		return window;
-	}
+	}*/
 }

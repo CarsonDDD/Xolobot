@@ -1,6 +1,5 @@
 ﻿using Discord.WebSocket;
 using Discord;
-using Hackathon.DataObjects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,7 +33,7 @@ public class ShopManager
 
 	// Similear to show shop, however just for search term items and shows more data `shop_page_<searchterm>_#`
 	// ONLY SHOWS 1 Item per page
-	public async Task ShowItemPage(ISocketMessageChannel location, String searchTerm, int pageIndex, List<Item> items, IUser userInteractor, IUserMessage existingMessage = null)
+	/*public async Task ShowItemPage(ISocketMessageChannel location, String searchTerm, int pageIndex, List<Item> items, IUser userInteractor, IUserMessage existingMessage = null)
 	{
 		if (searchTerm.Contains("_"))
 		{
@@ -79,10 +78,10 @@ public class ShopManager
 		{
 			await location.SendMessageAsync(embed: window.Build(), components: component.Build());
 		}
-	}
+	}*/
 
 	// a menu which has pages and shows item names
-	public async Task ShowShopPage(ISocketMessageChannel location, int pageIndex, List<Item> items, IUserMessage existingMessage = null)
+	/*public async Task ShowShopPage(ISocketMessageChannel location, int pageIndex, List<Item> items, IUserMessage existingMessage = null)
 	{
 
 		int totalPages = (int)Math.Ceiling(items.Count / (double)ITEMS_PER_SHOP_PAGE);
@@ -120,9 +119,9 @@ public class ShopManager
 		{
 			await location.SendMessageAsync(text: BUY_HELP_TEXT, embed: window.Build(), components: component);
 		}
-	}
+	}*/
 
-	public async void BuyItem(SocketMessageComponent caller, string itemName, MongoDBService databaseReference)
+	/*public async void BuyItem(SocketMessageComponent caller, string itemName, MongoDBService databaseReference)
 	{
 		int result = await databaseReference.BuyItem(caller.User.Id.ToString(), itemName);
 
@@ -138,5 +137,5 @@ public class ShopManager
 		{
 			await caller.RespondAsync($"<@{caller.User.Id}>, is now the owner of: {itemName}");
 		}
-	}
+	}*/
 }

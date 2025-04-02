@@ -62,8 +62,20 @@ public class Startup
 
 
 			// MONGO
-			services.Configure<MongoDBSettings>(host.Configuration.GetSection(nameof(MongoDBSettings)));
-			services.AddSingleton<MongoDBService>();
+			//services.Configure<MongoDBSettings>(host.Configuration.GetSection(nameof(MongoDBSettings)));
+			//services.AddSingleton<MongoDBService>();
+			//services.AddSingleton(new DatabaseService("xolobot.db", logger));
+			services.AddSingleton(provider =>
+			{
+				var logger = provider.GetRequiredService<ILogger<DatabaseService>>();
+				return new DatabaseService("xolobot.db", logger);
+			});
+
+			services.AddTransient<PlayerService>();
+			services.AddTransient<PlayerProfileService>();
+			services.AddTransient<ItemService>();
+			services.AddTransient<InventoryService>();
+
 		});
 
 		var app = builder.Build();

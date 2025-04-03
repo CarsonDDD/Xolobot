@@ -26,5 +26,22 @@ public class ShopModule : ModuleBase
 	public async Task Sell(string itemName, int quantity = 1, int? priceOverride = null) { /*...*/ }
 
 	[SlashCommand("open", "Open the shop interface")]
-	public async Task OpenShop(bool list = true, string? filter = null) { /*...*/ }
+	public async Task OpenShop(bool detailed = false, string? filter = null)
+	{
+		await DeferAsync();
+
+		var shopkeeper = _client.GetUser(ShopManager.SHOP_DISCORD_ID);
+
+		// Build the shop page using page index 0, compact view (detailed=false), no filter.
+		var result = ShopManager.Instance.BuildShopPage(shopkeeper, 0, _profileService, _playerService, detailed, filter);
+		if (result == null)
+		{
+			await FollowupAsync("The shop is currently empty.");
+			return;
+		}
+
+		var (embed, components) = result.Value;
+		await FollowupAsync(embed: embed, components: components);
+	}
+
 }

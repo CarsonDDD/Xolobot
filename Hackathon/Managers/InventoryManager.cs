@@ -10,14 +10,15 @@ public class InventoryManager
     private InventoryManager() { }
     public static InventoryManager Instance => _instance ??= new InventoryManager();
 
-    private const int ITEMS_PER_PAGE = 1;
+    public readonly static int ITEMS_PER_PAGE = 5;
 
     public (Embed embed, MessageComponent components)? BuildInventoryPage(
-           IUser user,
-           int pageIndex,
-           PlayerProfileService profileService,
-           PlayerService playerService,
-           string? filter = null)
+        IUser user,
+        int pageIndex,
+        PlayerProfileService profileService,
+        PlayerService playerService,
+        bool detailed,
+        string? filter = null)
     {
         var player = playerService.GetByDiscordId(user.Id.ToString());
         if (player == null) return null;
@@ -43,9 +44,9 @@ public class InventoryManager
 
         if (items.Count == 0) return null;
 
-        bool isFiltered = !string.IsNullOrWhiteSpace(filter);
-        int itemsPerPage = isFiltered ? 1 : ITEMS_PER_PAGE;
-
+        // Use the detailed parameter solely to control view style:
+        // If detailed is true, show one item per page regardless of filtering.
+        int itemsPerPage = detailed ? 1 : ITEMS_PER_PAGE;
         int totalPages = (int)Math.Ceiling(items.Count / (double)itemsPerPage);
         pageIndex = Math.Clamp(pageIndex, 0, totalPages - 1);
 
@@ -61,8 +62,9 @@ public class InventoryManager
         {
             string tags = item.Tags.Any() ? string.Join(", ", item.Tags.Select(t => t.Label)) : "None";
 
-            if (isFiltered)
+            if (detailed)
             {
+                // Detailed view shows one item with full info
                 embed.Title = item.Item.Name;
                 embed.Description = item.Item.LongDescription ?? "No description.";
                 embed.WithImageUrl(item.Item.ImgUrl ?? "");
@@ -72,12 +74,16 @@ public class InventoryManager
             }
             else
             {
+                // Compact view: list items in a field
                 embed.AddField(item.Item.Name,
                     $"Cost: {item.Item.BaseCost} | Weight: {item.Item.Weight}\nTags: {tags}", false);
             }
         }
 
-        string baseId = isFiltered ? $"inventory_filtered_{filter}_{user.Id}" : $"inventory_page_{user.Id}";
+        // Incorporate the detailed flag in the base id.
+        string baseId = !string.IsNullOrWhiteSpace(filter)
+            ? $"inventory_filtered_{filter}_{(detailed ? "detailed" : "compact")}_{user.Id}"
+            : $"inventory_page_{(detailed ? "detailed" : "compact")}_{user.Id}";
 
         var builder = new ComponentBuilder();
 
@@ -90,15 +96,18 @@ public class InventoryManager
         return (embed.Build(), builder.Build());
     }
 
+
+
     public async Task ShowInventoryPage(
-        ISocketMessageChannel location,
-        IUser user,
-        int pageIndex,
-        PlayerProfileService profileService,
-        PlayerService playerService,
-        IUserMessage? existingMessage = null)
+     ISocketMessageChannel location,
+     IUser user,
+     int pageIndex,
+     PlayerProfileService profileService,
+     PlayerService playerService,
+     bool detailed,
+     IUserMessage? existingMessage = null)
     {
-        var result = BuildInventoryPage(user, pageIndex, profileService, playerService);
+        var result = BuildInventoryPage(user, pageIndex, profileService, playerService, detailed, null);
         if (result == null)
         {
             await location.SendMessageAsync($"{user.Mention}, your inventory is empty or you are not registered.");
@@ -120,5 +129,6 @@ public class InventoryManager
             await location.SendMessageAsync(embed: embed, components: components);
         }
     }
+
 
 }

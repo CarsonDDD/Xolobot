@@ -1,4 +1,5 @@
-﻿using Discord.Interactions;
+﻿using Discord;
+using Discord.Interactions;
 using Discord.WebSocket;
 using Hackathon.Managers;
 using Hackathon.Managers.Inventory;
@@ -35,12 +36,14 @@ public class PlayerModule : ModuleBase
 	}
 
 	[SlashCommand("inventory", "Display your inventory")]
-	public async Task GetInventory(string? filter = null)
+	public async Task GetInventory(string? filter = null, IUser? target = null)
 	{
 		await DeferAsync(ephemeral: false);// can be either
 
+		var player = target == null ? Context.User : target;
+
 		var result = InventoryManager.Instance.BuildInventoryPage(
-			Context.User,
+			player,
 			pageIndex: 0,
 			_profileService,
 			_playerService,

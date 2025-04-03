@@ -106,7 +106,7 @@ public class InteractionHandler
 		ulong userId;
 		if (!ulong.TryParse(type == "filtered" ? parts[3] : parts[2], out userId)) return;
 
-		var user = component.User;
+		var user = _client.GetUser(userId);//component.User;
 
 		var result = InventoryManager.Instance.BuildInventoryPage(
 			user,

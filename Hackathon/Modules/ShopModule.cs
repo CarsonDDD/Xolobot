@@ -19,55 +19,12 @@ public class ShopModule : ModuleBase
 
 
 
-	#region HELPER FUNCTIONS
+	[SlashCommand("buy", "Buy item from the shop")]
+	public async Task Buy(string itemName, int quantity = 1, int? priceOverride = null) { /*...*/ }
 
-	/*private async void OpenShop(ISocketMessageChannel location)
-	{
-		// compact
-		var items = await _database.GetShopItems();
-		await ShopManager.Instance.ShowShopPage(location, 0, items);
-	}
+	[SlashCommand("sell", "Sell item to the shop")]
+	public async Task Sell(string itemName, int quantity = 1, int? priceOverride = null) { /*...*/ }
 
-	private async void OpenItemPage(ISocketMessageChannel location, String searchTerm)
-	{
-		// specific
-		var items = await _database.GetShopItems(searchTerm);
-		if (items.Count == 0)
-		{
-			await location.SendMessageAsync($"No items found for '{searchTerm}'.");
-			return;
-		}
-		await ShopManager.Instance.ShowItemPage(location, searchTerm, 0, items, Context.User);
-	}*/
-
-	/*public async Task<string> ProcessBuyItem(MongoDBService database, string itemName, int quantity, SocketUser user)
-	{
-		int successfulPurchases = 0;
-		for (int i = 0; i < quantity; i++)
-		{
-			int result = await database.BuyItem(user.Id.ToString(), itemName);
-			if (result == 1)
-			{
-				successfulPurchases++;
-			}
-			else if (result == 0)
-			{
-				return "Insufficient funds to purchase the item.";
-			}
-			else
-			{
-				return "An error occurred during the purchase process.";
-			}
-		}
-		return $"<@{user.Id}> successfully purchased {quantity} of **{itemName}**.";
-	}*/
-
-
-	private async Task ProcessSell(ISocketMessageChannel location, string itemName, int quantity, SocketUser user)
-	{
-
-	}
-	private void ProcessHagle() { }
-
-	#endregion
+	[SlashCommand("open", "Open the shop interface")]
+	public async Task OpenShop(bool list = true, string? filter = null) { /*...*/ }
 }

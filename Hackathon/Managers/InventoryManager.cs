@@ -87,11 +87,12 @@ public class InventoryManager
 
         var builder = new ComponentBuilder();
 
-        if (pageIndex > 0)
-            builder.WithButton("Previous", customId: $"{baseId}_{pageIndex - 1}", emote: new Emoji("\u2B05"));
+        // Always show nav buttons
+        builder.WithButton("", customId: $"{baseId}_{pageIndex - 1}", emote: new Emoji("\u2B05"), disabled: pageIndex == 0);
+        builder.WithButton("", customId: $"{baseId}_{pageIndex + 1}", emote: new Emoji("\u27A1"), disabled: pageIndex == totalPages - 1);
 
-        if (pageIndex < totalPages - 1)
-            builder.WithButton("Next", customId: $"{baseId}_{pageIndex + 1}", emote: new Emoji("\u27A1"));
+        if (detailed)
+            builder.WithButton("", customId: $"{baseId}_sell", emote: new Emoji("\uD83D\uDC4C"));
 
         return (embed.Build(), builder.Build());
     }

@@ -38,7 +38,7 @@ public class ShopManager
 		return playerProfileService.GetProfile(SHOP_DB_ID);
 	}
 
-	public List<ItemWithTags> GetShopInventory(PlayerProfileService playerProfileService, string? filter = null)
+	public List<InventoryDisplayItem> GetShopInventory(PlayerProfileService playerProfileService, string? filter = null)
 	{
 		var inv = GetShopkeeper(playerProfileService).Inventory;
 		// Filter goes here
@@ -96,8 +96,8 @@ public class ShopManager
 							  .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 			items = items.Where(i => terms.All(term =>
-				i.Item.Name.ToLower().Contains(term) ||
-				i.Tags.Any(t => t.Label.ToLower().Contains(term))
+				i.Item.DbReference.Name.ToLower().Contains(term) ||
+				i.Item.Tags.Any(t => t.Label.ToLower().Contains(term))
 			)).ToList();
 		}
 
@@ -119,23 +119,24 @@ public class ShopManager
 
 		foreach (var item in pagedItems)
 		{
-			string tags = item.Tags.Any() ? string.Join(", ", item.Tags.Select(t => t.Label)) : "None";
+			string tags = item.Item.Tags.Any() ? string.Join(", ", item.Item.Tags.Select(t => t.Label)) : "None";
 
 			if (detailed)
 			{
 				// Detailed (big) view shows one item with full info.
-				embed.Title = item.Item.Name;
-				embed.Description = item.Item.LongDescription ?? "No description.";
-				embed.WithImageUrl(item.Item.ImgUrl ?? "");
-				embed.AddField("Cost", $"{item.Item.BaseCost} gp", true);
-				embed.AddField("Weight", item.Item.Weight.ToString(), true);
+				embed.Title = item.Item.DbReference.Name;
+				embed.Description = item.Item.DbReference.LongDescription ?? "No description.";
+				embed.WithImageUrl(item.Item.DbReference.ImgUrl ?? "");
+				embed.AddField("Amount:", item.DbReference.Amount, true);
+				embed.AddField("Cost", $"{item.DbReference.ActualCost} gp", true);
+				embed.AddField("Weight", item.Item.DbReference.Weight.ToString(), true);
 				embed.AddField("Tags", tags, false);
 			}
 			else
 			{
 				// Compact view: list items with basic info.
-				embed.AddField(item.Item.Name,
-					$"Cost: {item.Item.BaseCost} | Weight: {item.Item.Weight}\nTags: {tags}", false);
+				embed.AddField(item.Item.DbReference.Name,
+					$"Cost: {item.DbReference.ActualCost} | Weight: {item.Item.DbReference.Weight}\nTags: {tags}", false);
 			}
 		}
 

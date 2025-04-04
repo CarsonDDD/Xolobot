@@ -45,7 +45,7 @@ public class PlayerProfileService
         var inventory = conn.QuerySingleOrDefault<Inventory>(
             "SELECT * FROM Inventory WHERE player_id = @id", new { id = playerId });
 
-        List<ItemWithTags> itemList = new();
+        List<InventoryDisplayItem> displayList = new();//List<ItemWithTags> itemList = new();
 
         if (inventory != null)
         {
@@ -54,17 +54,28 @@ public class PlayerProfileService
 
             foreach (var invItem in inventoryItems)
             {
+                // Resolve the item data.
                 var item = conn.QuerySingle<Item>("SELECT * FROM Item WHERE id = @id", new { id = invItem.Item_Id });
 
+                // Retrieve associated tags.
                 var tags = conn.Query<Tag>(
                     @"SELECT t.* FROM ItemTag it
-                      JOIN Tag t ON t.id = it.tag_id
-                      WHERE it.item_id = @itemId", new { itemId = item.Id }).ToList();
+                  JOIN Tag t ON t.id = it.tag_id
+                  WHERE it.item_id = @itemId",
+                    new { itemId = item.Id }).ToList();
 
-                itemList.Add(new ItemWithTags
+                // Build the ItemWithTags instance.
+                var itemWithTags = new ItemWithTags
                 {
-                    Item = item,
+                    DbReference = item,
                     Tags = tags
+                };
+
+                // Build the InventoryDisplayItem including the quantity and actual cost.
+                displayList.Add(new InventoryDisplayItem
+                {
+                    DbReference = invItem,
+                    Item = itemWithTags,
                 });
             }
         }
@@ -80,7 +91,7 @@ public class PlayerProfileService
             Inventory = inventory == null ? null : new InventoryWithItems
             {
                 Inventory = inventory,
-                Items = itemList
+                Items = displayList
             }
         };
     }

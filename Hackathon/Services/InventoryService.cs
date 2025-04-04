@@ -33,26 +33,34 @@ public class InventoryService
         var inventoryItems = GetItemsInInventory(inventory.Id);
 
         var conn = _db.GetConnection();
-        var itemsWithTags = new List<ItemWithTags>();
+        var displayItems = new List<InventoryDisplayItem>();
 
         foreach (var invItem in inventoryItems)
         {
+            // Retrieve the item details.
             var item = conn.QuerySingle<Item>("SELECT * FROM Item WHERE id = @id", new { id = invItem.Item_Id });
+
+            // Retrieve the tags associated with the item.
             var tags = conn.Query<Tag>(
                 "SELECT t.* FROM ItemTag it JOIN Tag t ON t.id = it.tag_id WHERE it.item_id = @itemId",
                 new { itemId = item.Id }).ToList();
 
-            itemsWithTags.Add(new ItemWithTags
+            // Map to InventoryDisplayItem.
+            displayItems.Add(new InventoryDisplayItem
             {
-                Item = item,
-                Tags = tags
+                DbReference = invItem,
+                Item = new ItemWithTags
+                {
+                    DbReference = item,
+                    Tags = tags
+                },
             });
         }
 
         return new InventoryWithItems
         {
             Inventory = inventory,
-            Items = itemsWithTags
+            Items = displayItems
         };
     }
 }

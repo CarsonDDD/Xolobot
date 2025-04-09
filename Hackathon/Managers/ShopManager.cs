@@ -59,10 +59,10 @@ public class ShopManager
 	}
 
 	public async Task<SHOP_RESULT> TrySellItem(
-	string sellerDiscordId,
-	string itemName,
-	int quantity,
-	PlayerService playerService)
+		string sellerDiscordId,
+		string itemName,
+		int quantity,
+		PlayerService playerService)
 	{
 		if (quantity <= 0) return SHOP_RESULT.INSUFFICIENT_QUANITY;
 
@@ -155,6 +155,20 @@ public class ShopManager
 			builder.WithButton(" ", customId: $"{baseId}_buy", emote: new Emoji("\uD83D\uDC4C"));
 
 		return (embed.Build(), builder.Build());
+	}
+
+
+	public (Embed embed, MessageComponent components)? BuildBuyInteract(
+		// item
+		// user/buyer reference????---no we only care about this in the actual button press---However, displaying the player info may be helpful?
+		// shopkeeper reference
+		Player player,
+
+
+	)
+	{
+
+		// At the end, we must somehow delete the shop message or something. Or have a retry if fail saying either the item no longer exists/already bought or the quanity changed.
 	}
 
 }

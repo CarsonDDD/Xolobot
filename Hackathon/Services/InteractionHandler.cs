@@ -93,8 +93,24 @@ public class InteractionHandler
 		else if (component.Data.CustomId.StartsWith("shop_page_") ||
 		 component.Data.CustomId.StartsWith("shop_filtered_"))
 		{
-			await HandleShopPageNavigation(component);
+
+			if (component.Data.CustomId.EndsWith("buy"))
+			{
+				await HandleShopBuyStartButton(component);
+			}
+			else
+			{
+				// nav
+				await HandleShopPageNavigation(component);
+			}
+
 		}
+	}
+
+	private async Task HandleShopBuyStartButton(SocketMessageComponent component)
+	{
+		await component.RespondAsync("Buy button pressed", ephemeral: true);
+		return;
 	}
 
 	private async Task HandleInventoryPageNavigation(SocketMessageComponent component)

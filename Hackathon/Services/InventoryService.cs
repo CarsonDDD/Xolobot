@@ -19,10 +19,10 @@ public class InventoryService
         return conn.QuerySingleOrDefault<Inventory>("SELECT * FROM Inventory WHERE player_id = @playerId", new { playerId });
     }
 
-    public List<InventoryItem> GetItemsInInventory(int inventoryId)
+    public List<ItemStack> GetItemsInInventory(int inventoryId)
     {
         using var conn = _db.GetConnection();
-        return conn.Query<InventoryItem>("SELECT * FROM InventoryItem WHERE inventory_id = @inventoryId", new { inventoryId }).ToList();
+        return conn.Query<ItemStack>("SELECT * FROM InventoryItem WHERE inventory_id = @inventoryId", new { inventoryId }).ToList();
     }
 
     public InventoryWithItems? GetInventoryWithItems(int playerId)
@@ -30,12 +30,12 @@ public class InventoryService
         var inventory = GetInventoryForPlayer(playerId);
         if (inventory == null) return null;
 
-        var inventoryItems = GetItemsInInventory(inventory.Id);
+        var itemStacks = GetItemsInInventory(inventory.Id);
 
         var conn = _db.GetConnection();
         var displayItems = new List<InventoryDisplayItem>();
 
-        foreach (var invItem in inventoryItems)
+        foreach (var invItem in itemStacks)
         {
             // Retrieve the item details.
             var item = conn.QuerySingle<Item>("SELECT * FROM Item WHERE id = @id", new { id = invItem.Item_Id });

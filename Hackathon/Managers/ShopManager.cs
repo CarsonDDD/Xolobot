@@ -158,7 +158,7 @@ public class ShopManager
 	}
 
 
-	public (Embed embed, MessageComponent components)? BuildBuyInteract(
+	/*public (Embed embed, MessageComponent components)? BuildBuyInteract(
 		// item
 		// user/buyer reference????---no we only care about this in the actual button press---However, displaying the player info may be helpful?
 		// shopkeeper reference
@@ -169,6 +169,6 @@ public class ShopManager
 	{
 
 		// At the end, we must somehow delete the shop message or something. Or have a retry if fail saying either the item no longer exists/already bought or the quanity changed.
-	}
+	}*/
 
 }

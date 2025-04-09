@@ -1,6 +1,6 @@
 namespace Hackathon.Entities;
 
-public class InventoryItem
+public class ItemStack
 {
     public int Id { get; set; }
     public int Inventory_Id { get; set; }

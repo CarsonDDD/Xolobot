@@ -49,7 +49,7 @@ public class PlayerProfileService
 
         if (inventory != null)
         {
-            var inventoryItems = conn.Query<InventoryItem>(
+            var inventoryItems = conn.Query<ItemStack>(
                 "SELECT * FROM InventoryItem WHERE inventory_id = @invId", new { invId = inventory.Id }).ToList();
 
             foreach (var invItem in inventoryItems)

@@ -278,13 +278,34 @@ public class ShopManager
 		);
 
 		string buyButtonText = null;
-		if (currentAmountSelected <= 0) buyButtonText = "Select a quantity";
-		else if (currentAmountSelected == 1) buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}";
-		else if (currentAmountSelected > 1) buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}'s";
+		Emoji buyEmoji = null;
+		if (currentAmountSelected <= 0)
+		{
+			buyButtonText = "Select a quantity";
+			buyEmoji = new Emoji("📄");
+		}
+		else if (currentAmountSelected > 0)
+		{
+			if (player.Gold < totalCost)
+			{
+				buyButtonText = "You cannot afford this";
+				buyEmoji = new Emoji("😬");
+			}
+			else
+			{
+				if (currentAmountSelected == 1) buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}";
+				else buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}'s";
 
+				buyEmoji = new Emoji("📦");
+			}
+		}
 
-		builder.WithButton(buyButtonText, customId: $"buymenu_buy_{shopKeeper.Player.Id}_{currentAmountSelected}", emote: new Emoji("📦"), style: ButtonStyle.Success, disabled: (player.Gold < item.DbMeta.ActualCost) || (currentAmountSelected <= 0));
-		builder.WithButton("Haggle", customId: $"buymenu_haggle", emote: new Emoji("🤌"), style: ButtonStyle.Primary, disabled: (player.Gold < item.DbMeta.ActualCost) || (currentAmountSelected <= 0));
+		// emojis: select quant
+		// buy
+		// poor
+
+		builder.WithButton(buyButtonText, customId: $"buymenu_buy_{shopKeeper.Player.Id}_{currentAmountSelected}", emote: buyEmoji, style: ButtonStyle.Success, disabled: (player.Gold < totalCost) || (currentAmountSelected <= 0));
+		builder.WithButton("Haggle", customId: $"buymenu_haggle", emote: new Emoji("🤌"), style: ButtonStyle.Primary, disabled: (player.Gold < totalCost) || (currentAmountSelected <= 0));
 		//builder.WithButton("✘ Cancel", customId: $"buymenu_cancel", emote: new Emoji("🙅‍♂️"), style: ButtonStyle.Danger);
 
 		return (embed.Build(), builder.Build());

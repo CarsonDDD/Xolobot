@@ -220,7 +220,7 @@ public class ShopManager
 
 		var embed = new EmbedBuilder()
 			/*with author*/
-			.WithTitle(item.Item.DbReference.Name)
+			.WithTitle("Buy: " + item.Item.DbReference.Name)
 			.WithDescription(item.Item.DbReference.LongDescription ?? "No description.")
 			.WithThumbnailUrl(item.Item.DbReference.ImgUrl ?? "")
 			.WithFooter($"Your Gold Available: {player.Gold} gp")
@@ -296,7 +296,7 @@ public class ShopManager
 				if (currentAmountSelected == 1) buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}";
 				else buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}'s";
 
-				buyEmoji = new Emoji("📦");
+				buyEmoji = new Emoji("🎁");
 			}
 		}
 
@@ -304,9 +304,152 @@ public class ShopManager
 		// buy
 		// poor
 
-		builder.WithButton(buyButtonText, customId: $"buymenu_buy_{shopKeeper.Player.Id}_{currentAmountSelected}", emote: buyEmoji, style: ButtonStyle.Success, disabled: (player.Gold < totalCost) || (currentAmountSelected <= 0));
-		builder.WithButton("Haggle", customId: $"buymenu_haggle", emote: new Emoji("🤌"), style: ButtonStyle.Primary, disabled: (player.Gold < totalCost) || (currentAmountSelected <= 0));
+		bool canTransact = player.Gold > totalCost;
+
+		builder.WithButton(buyButtonText, customId: $"buymenu_buy_{shopKeeper.Player.Id}_{currentAmountSelected}", emote: buyEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
+
+		if (canTransact && currentAmountSelected > 0)
+		{
+			builder.WithButton("Haggle", customId: $"buymenu_haggle", emote: new Emoji("🤌"), style: ButtonStyle.Primary, disabled: !canTransact || (currentAmountSelected <= 0));
+		}
 		//builder.WithButton("✘ Cancel", customId: $"buymenu_cancel", emote: new Emoji("🙅‍♂️"), style: ButtonStyle.Danger);
+
+		return (embed.Build(), builder.Build());
+	}
+
+	public (Embed embed, MessageComponent components)? BuildSellInteract(
+		DiscordSocketClient client,
+		Player buyer,
+		ItemStack? currentItem,
+		PlayerProfile seller,
+		string[] filter,
+		int currentAmountSelected = 0
+	)
+	{
+		// At the end, we must somehow delete the shop message or something. Or have a retry if fail saying either the item no longer exists/already bought or the quanity changed.
+		if (seller == null) throw new ArgumentNullException(nameof(seller));
+
+		InventoryWithItems sellInventory = seller.Inventory.FilteredInventory(filter);
+
+		if (sellInventory.Items.Count == 0)
+		{
+			var emptyEmbed = new EmbedBuilder()
+				.WithTitle("Nothing Found!")
+				.WithDescription("You have no items with the specified search criteria.\nPlease try a different search or check back later.")
+				.WithColor(Color.DarkRed)
+				.Build();
+
+			return (emptyEmbed, new ComponentBuilder().Build());
+		}
+
+		/*var shopUser = client.GetUser(seller.Player.DiscordId);
+		if (shopUser == null)
+		{
+			throw new Exception("SHOP OWNER NULL: " + seller.Player.DiscordId);
+		}*/
+
+		//default to first is none was selected
+		if (currentItem == null)
+		{
+			currentItem = sellInventory.Items[0];
+		}
+
+		int totalCost = currentItem.DbMeta.ActualCost * Math.Max(0, currentAmountSelected);
+
+		var embed = new EmbedBuilder()
+			.WithAuthor(client.GetUser(ulong.Parse(seller.Player.DiscordId)))
+			.WithTitle("Sell: " + currentItem.Item.DbReference.Name)
+			.WithDescription(currentItem.Item.DbReference.LongDescription ?? "No description.")
+			.WithThumbnailUrl(currentItem.Item.DbReference.ImgUrl ?? "")
+			.WithFooter($"{buyer.Name}'s Total Available Gold: {buyer.Gold} gp")
+			.WithColor(Color.Blue);
+
+
+		embed.AddField("Price-Per-Unit:", currentItem.DbMeta.ActualCost + "gp", true);
+		embed.AddField("Total Gain:", totalCost + "gp", true);
+
+
+		var builder = new ComponentBuilder();
+
+		// Prepare a safe string representation of the filter by joining tokens with hyphen.
+		string filterParam = filter.Length > 0 ? string.Join("-", filter) : "";
+
+		// item selector
+		var itemSelector = new List<SelectMenuOptionBuilder>();
+		int maxItem = Math.Min(25, sellInventory.Items.Count);// 25 is max
+		for (int i = 0; i < maxItem; i++)
+		{
+			string itemName = sellInventory.Items[i].Item.DbReference.Name;
+			int itemId = sellInventory.Items[i].Item.DbReference.Id;
+			//opensell_{buyerDBId}_{itemId}_0_{filterParam} // 0 as starting amount
+			itemSelector.Add(new SelectMenuOptionBuilder(
+				label: itemName,
+				description: string.Join(", ", sellInventory.Items[i].Item.Tags),
+				value: $"opensell_{seller.Player.DiscordId}_{itemId}_0_{filterParam}"
+			));
+		}
+		builder.WithSelectMenu(
+				customId: "sellmenu_itemselector",
+				options: itemSelector,
+				placeholder: currentItem.Item.DbReference.Name
+		);
+
+
+		// generate amount list.
+		var quantityOptions = new List<SelectMenuOptionBuilder>();
+		int maxQuant = Math.Min(25, currentItem.DbMeta.Amount);// 25 is max
+		for (int i = 0; i < maxQuant; i++)
+		{
+			//opensell_{buyerDBId}_{itemId}_{quantity}_{filterParam}
+			quantityOptions.Add(new SelectMenuOptionBuilder(
+				label: (i + 1).ToString(),
+				value: $"opensell_{seller.Player.DiscordId}_{currentItem.Item.DbReference.Id}_{i + 1}_{filterParam}"
+			));
+		}
+
+		string quantityPlaceholder = currentAmountSelected > 0 ? currentAmountSelected.ToString() : "Select Quantity";
+
+		builder.WithSelectMenu(
+				customId: "sellmenu_quantselector",
+				options: quantityOptions,
+				placeholder: quantityPlaceholder
+		);
+
+		string sellButtonText = null;
+		Emoji sellEmoji = null;
+		if (currentAmountSelected <= 0)
+		{
+			sellButtonText = "Select a quantity";
+			sellEmoji = new Emoji("📄");
+		}
+		else if (currentAmountSelected > 0)
+		{
+			if (buyer.Gold < totalCost)
+			{
+				sellButtonText = "I cannot afford this";
+				sellEmoji = new Emoji("😬");
+			}
+			else
+			{
+				if (currentAmountSelected == 1) sellButtonText = $"Sell {currentAmountSelected} {currentItem.Item.DbReference.Name}";
+				else sellButtonText = $"Sell {currentAmountSelected} {currentItem.Item.DbReference.Name}'s";
+
+				sellEmoji = new Emoji("📦");
+			}
+		}
+
+		// emojis: select quant
+		// sell
+		// poor
+		bool canTransact = buyer.Gold > totalCost;
+
+		builder.WithButton(sellButtonText, customId: $"sellmenu_sell_{seller.Player.Id}_{currentAmountSelected}", emote: sellEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
+
+		if (currentAmountSelected > 0 && canTransact)
+		{
+			builder.WithButton("Haggle", customId: $"sellmenu_haggle", emote: new Emoji("🤌"), style: ButtonStyle.Primary, disabled: !canTransact || (currentAmountSelected <= 0));
+		}
+		//builder.WithButton("✘ Cancel", customId: $"sellmenu_cancel", emote: new Emoji("🙅‍♂️"), style: ButtonStyle.Danger);
 
 		return (embed.Build(), builder.Build());
 	}

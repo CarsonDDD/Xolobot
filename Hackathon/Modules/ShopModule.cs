@@ -69,8 +69,54 @@ public class ShopModule : ModuleBase
 		await FollowupAsync(embed: embed, components: components, ephemeral: true);
 	}
 
-	[SlashCommand("sell", "Sell item to the shop")]
-	public async Task Sell(string itemName, int quantity = 1, int? priceOverride = null) { /*...*/ }
+	[SlashCommand("sell", "Sell an item from your inventory")]
+	public async Task Sell(string? searchTerm = null)
+	{
+		// open buy menu. No raw commands!
+		// verify item, if not exist, tell user and default to first item
+
+		await DeferAsync(ephemeral: true);
+
+		ItemStack? startingItem = null;
+		var playerSeller = _profileService.GetProfileByDiscordId(Context.User.Id.ToString());
+		if (playerSeller == null || playerSeller.Inventory == null)
+		{
+			await FollowupAsync("You are not registered.", ephemeral: true);
+			return;
+		}
+
+		var buyer = _playerService.GetByDiscordId(ShopManager.SHOP_DISCORD_ID.ToString());
+		if (buyer == null)
+		{
+			await FollowupAsync("Buyer not found.", ephemeral: true);
+			return;
+		}
+
+		var startingAmount = 0;
+
+		string[] filter;
+
+		if (!string.IsNullOrWhiteSpace(searchTerm))
+		{
+			searchTerm = searchTerm.Replace("_", "");// sanitize
+
+			filter = searchTerm
+				.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries)
+				.Select(t => t.Trim())
+				.ToArray();
+		}
+		else
+		{
+			filter = new string[0];
+		}
+
+
+		// Build the shop page using page index 0, compact view (detailed=false), no filter.
+		var result = ShopManager.Instance.BuildSellInteract(_client, buyer, startingItem, playerSeller, filter, startingAmount);
+
+		var (embed, components) = result.Value;
+		await FollowupAsync(embed: embed, components: components, ephemeral: true);
+	}
 
 	[SlashCommand("open", "Open the shop interface")]
 	public async Task OpenShop(bool detailed = false, string? filter = null)

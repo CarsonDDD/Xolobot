@@ -96,6 +96,60 @@ public class InteractionHandler
 		{
 			await HandleUpdateBuyMenuAmount(component, component.Data.Values);
 		}
+		else if (component.Data.CustomId.StartsWith("sellmenu_quantselector") || component.Data.CustomId.StartsWith("sellmenu_itemselector"))
+		{
+			await HandleUpdateSellMenuAmount(component, component.Data.Values);
+		}
+	}
+
+	private async Task HandleUpdateSellMenuAmount(SocketMessageComponent component, IReadOnlyCollection<string> values)
+	{
+		var parts = values.First().Split('_');
+		// openbuy_{sellerDiscordID}_{itemLedgerID}_{amountSelected}_{filter}. --- Buyer if determined ONLY on press interact
+
+		if (parts.Length < 4)
+		{
+			await component.RespondAsync("error in custom ID.", ephemeral: true);
+			return;
+		}
+
+		string buyerDiscordId = parts[1];
+		string itemId = parts[2];
+		string sellerDiscordId = component.User.Id.ToString();// This is who interacted with the button
+		int startingAmount = int.Parse(parts[3]);
+
+		// Break down filter. 
+		string filterString = parts.Length >= 5 ? parts[4] : "";
+		string[] filterArray = string.IsNullOrWhiteSpace(filterString)
+			? new string[0]
+			: filterString.Split('-');
+
+		var buyer = _playerService.GetByDiscordId(buyerDiscordId);
+		var playerSelling = _profileService.GetProfileByDiscordId(sellerDiscordId);
+
+		if (playerSelling == null)
+		{
+			await component.RespondAsync("Shop not found.", ephemeral: true);
+			return;
+		}
+
+		var selectedItem = _inventoryService.GetInventoryItemStack(Int32.Parse(itemId), ulong.Parse(buyerDiscordId));
+
+		var result = ShopManager.Instance.BuildSellInteract(_client, buyer, selectedItem, playerSelling, filterArray, startingAmount);
+
+		if (result == null)
+		{
+			await component.RespondAsync("No matching items.---SOMETHING WENT WRONG AAH", ephemeral: true);
+			return;
+		}
+
+		var (embed, components) = result.Value;
+
+		await component.UpdateAsync(msg =>
+		{
+			msg.Embed = embed;
+			msg.Components = components;
+		});
 	}
 
 	private async Task HandleUpdateBuyMenuAmount(SocketMessageComponent component, IReadOnlyCollection<string> values)
@@ -167,6 +221,63 @@ public class InteractionHandler
 		{
 			await HandleShopBuyMenuOpenButton(component);
 		}
+		else if (component.Data.CustomId.StartsWith("opensell_"))
+		{
+			await HandleShopSellMenuOpenButton(component);
+		}
+	}
+
+	private async Task HandleShopSellMenuOpenButton(SocketMessageComponent component)
+	{
+		var parts = component.Data.CustomId.Split('_');
+		// opensell_{sellerDiscordID}_{itemLedgerID}_{amountSelected}_{filter}. --- Buyer if determined ONLY on press interact
+
+		if (parts.Length < 4)
+		{
+			await component.RespondAsync("error in custom ID.", ephemeral: true);
+			return;
+		}
+
+		string buyerDiscordId = parts[1];
+		string itemId = parts[2];
+		string sellerDiscordId = component.User.Id.ToString();// This is who interacted with the button
+		int startingAmount = int.Parse(parts[3]);
+
+		// Break down filter. 
+		string filterString = parts.Length >= 5 ? parts[4] : "";
+		string[] filterArray = string.IsNullOrWhiteSpace(filterString)
+			? new string[0]
+			: filterString.Split('-');
+
+		var buyer = _playerService.GetByDiscordId(buyerDiscordId);
+		var playerSelling = _profileService.GetProfileByDiscordId(sellerDiscordId);
+
+		if (playerSelling == null)
+		{
+			await component.RespondAsync("Shop not found.", ephemeral: true);
+			return;
+		}
+
+		var selectedItem = _inventoryService.GetInventoryItemStack(Int32.Parse(itemId), ulong.Parse(buyerDiscordId));
+
+		var result = ShopManager.Instance.BuildSellInteract(_client, buyer, selectedItem, playerSelling, filterArray, startingAmount);
+
+		if (result == null)
+		{
+			await component.RespondAsync("No matching items.---SOMETHING WENT WRONG AAH", ephemeral: true);
+			return;
+		}
+
+		var (embed, components) = result.Value;
+		await component.RespondAsync(embed: embed, components: components, ephemeral: true);
+
+		/*var (embed, components) = result.Value;
+
+		await component.UpdateAsync(msg =>
+		{
+			msg.Embed = embed;
+			msg.Components = components;
+		});*/
 	}
 
 	private async Task HandleShopBuyMenuOpenButton(SocketMessageComponent component)

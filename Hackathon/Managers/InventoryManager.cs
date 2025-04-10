@@ -1,5 +1,7 @@
 using Discord;
 using Discord.WebSocket;
+using Hackathon.DomainObjects;
+using Hackathon.Managers.Shop;
 using Hackathon.Services;
 
 namespace Hackathon.Managers.Inventory;
@@ -31,18 +33,26 @@ public class InventoryManager
         // Apply multi-term filter if present
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            if (filter.Contains("_")) return null; // Prevent invalid identifiers
+            filter = filter.Replace("_", "");// sanitize
 
-            var terms = filter.ToLowerInvariant()
-                              .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-            items = items.Where(i => terms.All(term =>
-                i.Item.DbReference.Name.ToLower().Contains(term) ||
-                i.Item.Tags.Any(t => t.Label.ToLower().Contains(term))
-            )).ToList();
+            // You can instead convert your filter string into tokens...
+            var terms = filter
+                .Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => t.Trim())
+                .ToArray();
+            items = profile.Inventory.FilterList(terms);
         }
 
-        if (items.Count == 0) return null;
+        if (items.Count == 0)
+        {
+            var emptyEmbed = new EmbedBuilder()
+                .WithTitle("Nothing Available!")
+                .WithDescription("There are no items available with the specified search criteria.\nPlease try a different search or check back later.")
+                .WithColor(Color.DarkRed)
+                .Build();
+
+            return (emptyEmbed, new ComponentBuilder().Build());
+        }
 
         // Use the detailed parameter solely to control view style:
         // If detailed is true, show one item per page regardless of filtering.
@@ -57,6 +67,8 @@ public class InventoryManager
             .WithTitle($"{profile.Player.Name}'s Inventory")
             .WithFooter($"Page {pageIndex + 1} of {totalPages}")
             .WithColor(Color.DarkGreen);
+
+        ItemStack? displayedItem = null;
 
         foreach (var item in pagedItems)
         {
@@ -73,6 +85,8 @@ public class InventoryManager
                 embed.AddField("‎ ", $"**Cost:** {item.DbMeta.ActualCost} gp", true);
                 embed.AddField("‎ ", "**Weight:** " + item.Item.DbReference.Weight.ToString(), true);
                 embed.AddField("Tags", tags, false);
+
+                displayedItem = item;
             }
             else
             {
@@ -81,6 +95,8 @@ public class InventoryManager
                     $"Cost: {item.DbMeta.ActualCost} | Weight: {item.Item.DbReference.Weight}\nTags: {tags}", true);
             }
         }
+
+        string filterParam = !string.IsNullOrWhiteSpace(filter) ? filter : "";
 
         // Incorporate the detailed flag in the base id.
         string baseId = !string.IsNullOrWhiteSpace(filter)
@@ -97,8 +113,8 @@ public class InventoryManager
         {
             // item id.....
             //itemInQuestion.Item.Id
-            string sellId = $"inventory_sell_{user.Id}_{items[pageIndex].Item.DbReference.Id}";// Note this is refencing item and NOT inventory item... Is this bad?
-            builder.WithButton("Sell", customId: sellId, style: ButtonStyle.Success, emote: new Emoji("💰"));
+            string sellId = $"opensell_{player.DiscordId}_{displayedItem.Item.DbReference.Id}_1_{filterParam}";
+            builder.WithButton($"Show {playerService.GetByDiscordId(ShopManager.SHOP_DISCORD_ID.ToString()).Name}", customId: sellId, style: ButtonStyle.Success, emote: new Emoji("🏚️"));
         }
 
         return (embed.Build(), builder.Build());

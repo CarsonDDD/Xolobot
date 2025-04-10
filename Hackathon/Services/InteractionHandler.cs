@@ -92,7 +92,7 @@ public class InteractionHandler
 		var value = string.Join(", ", component.Data.Values); // I am confused on why this is an arary for a single string.
 		_logger.LogInformation($"{component.User.GlobalName}: {component.Data.CustomId}: {value}");
 
-		if (component.Data.CustomId.StartsWith("buymenu_amountselector"))
+		if (component.Data.CustomId.StartsWith("buymenu_quantselector") || component.Data.CustomId.StartsWith("buymenu_itemselector"))
 		{
 			await HandleUpdateBuyMenuAmount(component, component.Data.Values);
 		}
@@ -101,20 +101,37 @@ public class InteractionHandler
 	private async Task HandleUpdateBuyMenuAmount(SocketMessageComponent component, IReadOnlyCollection<string> values)
 	{
 		var parts = values.First().Split('_');
-		// openbuy_{sellerDiscordID}_{itemLedgerID}_{amountSelected}. --- Buyer if determined ONLY on press interact
+		// openbuy_{sellerDiscordID}_{itemLedgerID}_{amountSelected}_{filter}. --- Buyer if determined ONLY on press interact
+
+		if (parts.Length < 4)
+		{
+			await component.RespondAsync("error in custom ID.", ephemeral: true);
+			return;
+		}
 
 		string sellerDiscordId = parts[1];
 		string itemId = parts[2];// define what I actuall mean by this.
 		string buyerDiscordId = component.User.Id.ToString();// This is who interacted with the button
 		int startingAmount = int.Parse(parts[3]);
 
+		// Break down filter. 
+		string filterString = parts.Length >= 5 ? parts[4] : "";
+		string[] filterArray = string.IsNullOrWhiteSpace(filterString)
+			? new string[0]
+			: filterString.Split('-');
+
 		var player = _playerService.GetByDiscordId(buyerDiscordId);
 		var shop = _profileService.GetProfileByDiscordId(sellerDiscordId);
+
+		if (shop == null)
+		{
+			await component.RespondAsync("Shop not found.", ephemeral: true);
+			return;
+		}
+
 		var shopItem = _inventoryService.GetInventoryItemStack(Int32.Parse(itemId), ulong.Parse(sellerDiscordId));
 
-		var result = ShopManager.Instance.BuildBuyInteract(
-			_client, player, shopItem, shop, startingAmount
-		);
+		var result = ShopManager.Instance.BuildBuyInteract(_client, player, shopItem, shop, filterArray, startingAmount);
 
 		if (result == null)
 		{
@@ -155,22 +172,37 @@ public class InteractionHandler
 	private async Task HandleShopBuyMenuOpenButton(SocketMessageComponent component)
 	{
 		var parts = component.Data.CustomId.Split('_');
-		//await component.RespondAsync("Buy button pressed", ephemeral: true);
-		// openbuy_{sellerDiscordID}_{itemLedgerID}_{amountSelected}. --- Buyer if determined ONLY on press interact
+		// openbuy_{sellerDiscordID}_{itemLedgerID}_{amountSelected}_{filter}. --- Buyer if determined ONLY on press interact
+		if (parts.Length < 4)
+		{
+			await component.RespondAsync("error in custom ID.", ephemeral: true);
+			return;
+		}
 
 		string sellerDiscordId = parts[1];
-		string itemId = parts[2];// define what I actuall mean by this.
-		string buyerDiscordId = component.User.Id.ToString();// This is who interacted with the button
+		string itemId = parts[2];// db ledger reference
 		int startingAmount = int.Parse(parts[3]);
+
+		// Break down filter. 
+		string filterString = parts.Length >= 5 ? parts[4] : "";
+		string[] filterArray = string.IsNullOrWhiteSpace(filterString)
+			? new string[0]
+			: filterString.Split('-');
+
+		string buyerDiscordId = component.User.Id.ToString();// This is who interacted with the button
 
 		var player = _playerService.GetByDiscordId(buyerDiscordId);
 		var shop = _profileService.GetProfileByDiscordId(sellerDiscordId);
-		var shopItem = _inventoryService.GetInventoryItemStack(Int32.Parse(itemId), ulong.Parse(sellerDiscordId));
-		//var item
 
-		var result = ShopManager.Instance.BuildBuyInteract(
-			_client, player, shopItem, shop, startingAmount
-		);
+		if (shop == null)
+		{
+			await component.RespondAsync("Shop not found.", ephemeral: true);
+			return;
+		}
+
+		var shopItem = _inventoryService.GetInventoryItemStack(Int32.Parse(itemId), ulong.Parse(sellerDiscordId));
+
+		var result = ShopManager.Instance.BuildBuyInteract(_client, player, shopItem, shop, filterArray, startingAmount);
 
 		if (result == null)
 		{

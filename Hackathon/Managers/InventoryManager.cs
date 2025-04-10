@@ -78,7 +78,7 @@ public class InventoryManager
             {
                 // Compact view: list items in a field
                 embed.AddField(item.Item.DbReference.Name,
-                    $"Cost: {item.DbMeta.ActualCost} | Weight: {item.Item.DbReference.Weight}\nTags: {tags}", false);
+                    $"Cost: {item.DbMeta.ActualCost} | Weight: {item.Item.DbReference.Weight}\nTags: {tags}", true);
             }
         }
 

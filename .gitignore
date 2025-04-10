@@ -13,6 +13,8 @@ Hackathon/.vs/
 *.user
 *.sln.docstates
 
+Hackathon/xolobot.db-journal
+
 # Build results
 
 [Dd]ebug/

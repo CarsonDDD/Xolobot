@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Hackathon.Managers.Inventory;
 using Hackathon.Managers.Shop;
 using Microsoft.Extensions.Logging;
+using MongoDB.Driver;
 using System.Configuration;
 using System.Reflection;
 
@@ -50,6 +51,7 @@ public class InteractionHandler
 
 		// events
 		_client.ButtonExecuted += ButtonHandler;
+		_client.SelectMenuExecuted += SelectMenuHandler;
 	}
 
 	public async Task InitializeAsync()
@@ -85,6 +87,50 @@ public class InteractionHandler
 		//await Console.Out.WriteLineAsync("general message Test");// anything sent, anywhere 
 	}
 
+	private async Task SelectMenuHandler(SocketMessageComponent component)
+	{
+		var value = string.Join(", ", component.Data.Values); // I am confused on why this is an arary for a single string.
+		_logger.LogInformation($"{component.User.GlobalName}: {component.Data.CustomId}: {value}");
+
+		if (component.Data.CustomId.StartsWith("buymenu_amountselector"))
+		{
+			await HandleUpdateBuyMenuAmount(component, component.Data.Values);
+		}
+	}
+
+	private async Task HandleUpdateBuyMenuAmount(SocketMessageComponent component, IReadOnlyCollection<string> values)
+	{
+		var parts = values.First().Split('_');
+		// openbuy_{sellerDiscordID}_{itemLedgerID}_{amountSelected}. --- Buyer if determined ONLY on press interact
+
+		string sellerDiscordId = parts[1];
+		string itemId = parts[2];// define what I actuall mean by this.
+		string buyerDiscordId = component.User.Id.ToString();// This is who interacted with the button
+		int startingAmount = int.Parse(parts[3]);
+
+		var player = _playerService.GetByDiscordId(buyerDiscordId);
+		var shop = _profileService.GetProfileByDiscordId(sellerDiscordId);
+		var shopItem = _inventoryService.GetInventoryItemStack(Int32.Parse(itemId), ulong.Parse(sellerDiscordId));
+
+		var result = ShopManager.Instance.BuildBuyInteract(
+			_client, player, shopItem, shop, startingAmount
+		);
+
+		if (result == null)
+		{
+			await component.RespondAsync("No matching items.---SOMETHING WENT WRONG AAH", ephemeral: true);
+			return;
+		}
+
+		var (embed, components) = result.Value;
+
+		await component.UpdateAsync(msg =>
+		{
+			msg.Embed = embed;
+			msg.Components = components;
+		});
+	}
+
 	private async Task ButtonHandler(SocketMessageComponent component)
 	{
 		//Console.Out.WriteLine(component.User.GlobalName + ": " + component.Data.CustomId);
@@ -102,19 +148,20 @@ public class InteractionHandler
 		}
 		else if (component.Data.CustomId.StartsWith("openbuy_"))
 		{
-			await HandleShopBuyStartButton(component);
+			await HandleShopBuyMenuOpenButton(component);
 		}
 	}
 
-	private async Task HandleShopBuyStartButton(SocketMessageComponent component)
+	private async Task HandleShopBuyMenuOpenButton(SocketMessageComponent component)
 	{
 		var parts = component.Data.CustomId.Split('_');
 		//await component.RespondAsync("Buy button pressed", ephemeral: true);
-		// openbuy_{sellerDiscordID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
+		// openbuy_{sellerDiscordID}_{itemLedgerID}_{amountSelected}. --- Buyer if determined ONLY on press interact
 
 		string sellerDiscordId = parts[1];
 		string itemId = parts[2];// define what I actuall mean by this.
 		string buyerDiscordId = component.User.Id.ToString();// This is who interacted with the button
+		int startingAmount = int.Parse(parts[3]);
 
 		var player = _playerService.GetByDiscordId(buyerDiscordId);
 		var shop = _profileService.GetProfileByDiscordId(sellerDiscordId);
@@ -122,8 +169,7 @@ public class InteractionHandler
 		//var item
 
 		var result = ShopManager.Instance.BuildBuyInteract(
-			_client, player, shopItem, shop
-
+			_client, player, shopItem, shop, startingAmount
 		);
 
 		if (result == null)

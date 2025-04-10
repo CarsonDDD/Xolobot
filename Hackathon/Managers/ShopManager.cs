@@ -163,7 +163,8 @@ public class ShopManager
 		if (detailed)
 		{
 			// openbuy_{sellerDiscordID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
-			builder.WithButton(" ", customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}", emote: new Emoji("\uD83D\uDC4C"));
+			int startingAmount = 0;
+			builder.WithButton(" ", customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}_{startingAmount}", emote: new Emoji("\uD83D\uDC4C"));
 		}
 
 		return (embed.Build(), builder.Build());
@@ -177,7 +178,8 @@ public class ShopManager
 		DiscordSocketClient client,
 		Player player,
 		ItemStack item,
-		PlayerProfile shopkeeper
+		PlayerProfile shopkeeper,
+		int currentAmountSelected = 0
 	)
 	{
 		// At the end, we must somehow delete the shop message or something. Or have a retry if fail saying either the item no longer exists/already bought or the quanity changed.
@@ -185,67 +187,49 @@ public class ShopManager
 
 		var shopUser = client.GetUser(shopkeeper.Player.DiscordId);
 
+		int totalCost = item.DbMeta.ActualCost * Math.Max(0, currentAmountSelected);
+
 		var embed = new EmbedBuilder()
 			/*.WithAuthor(shopUser)*/
 			.WithTitle(item.Item.DbReference.Name)
-			.WithFooter("Xolobob sends his regards")
+			.WithFooter("Your Gold Available: " + player.Gold + "gp")
 			.WithColor(Color.Blue);
 
 
-		string tags = item.Item.Tags.Any() ? string.Join(", ", item.Item.Tags.Select(t => t.Label)) : "None";
-
-		// Detailed (big) view shows one item with full info.
 		embed.Title = item.Item.DbReference.Name;
 		embed.Description = item.Item.DbReference.LongDescription ?? "No description.";
 		embed.WithThumbnailUrl(item.Item.DbReference.ImgUrl ?? "");
-		embed.AddField("Price-Per-Unit:", item.DbMeta.ActualCost + "gp", false);
-		embed.AddField("Your Gold Available:", player.Gold + "gp", false);
+		embed.AddField("Price-Per-Unit:", item.DbMeta.ActualCost + "gp", true);
+		embed.AddField("Total Cost:", totalCost + "gp", true);
 
-		/*string baseId = !string.IsNullOrWhiteSpace(filter)
-			? $"shop_filtered_{filter}_{(detailed ? "detailed" : "compact")}_{user.Id}"
-			: $"shop_page_{(detailed ? "detailed" : "compact")}_{user.Id}";*/
 
 		var builder = new ComponentBuilder();
 
 		// generate amount list.
-		// Either loop and do an option for 1...n
-		// Or do basic operations like 1, 2, 4, 8, 10
+		var quantityOptions = new List<SelectMenuOptionBuilder>();
+		int maxOption = Math.Min(25, item.DbMeta.Amount);// 25 is max
+		for (int i = 0; i < maxOption; i++)
+		{
+			quantityOptions.Add(new SelectMenuOptionBuilder((i + 1) + "", $"openbuy_{shopkeeper.Player.DiscordId}_{item.Item.DbReference.Id}_" + (i + 1)));
+		}
+
+		string placeHolder = "Quantity";
+		if (currentAmountSelected > 0) placeHolder = currentAmountSelected.ToString();
 
 		builder.WithSelectMenu(
-				customId: "amount_select",
-				options: new List<SelectMenuOptionBuilder>
-				{
-					new SelectMenuOptionBuilder("1", "amount_1", "Buy 1 item"),
-					new SelectMenuOptionBuilder("2", "amount_2", "Buy 2 items"),
-					new SelectMenuOptionBuilder("3", "amount_3", "Buy 3 item"),
-					new SelectMenuOptionBuilder("4", "amount_4", "Buy 4 items"),
-					new SelectMenuOptionBuilder("5", "amount_5", "Buy 5 item"),
-					new SelectMenuOptionBuilder("6", "amount_6", "Buy 6 items"),
-					new SelectMenuOptionBuilder("7", "amount_7", "Buy 7 item"),
-					new SelectMenuOptionBuilder("8", "amount_8", "Buy 8 items"),
-					new SelectMenuOptionBuilder("9", "amount_9", "Buy 9 item"),
-					new SelectMenuOptionBuilder("10", "amount_10", "Buy 10 items"),
-					new SelectMenuOptionBuilder("11", "amount_11", "Buy 11 item"),
-					new SelectMenuOptionBuilder("12", "amount_12", "Buy 12 items"),
-					new SelectMenuOptionBuilder("13", "amount_13", "Buy 13 item"),
-					new SelectMenuOptionBuilder("14", "amount_14", "Buy 14 items"),
-					new SelectMenuOptionBuilder("15", "amount_15", "Buy 15 item"),
-					new SelectMenuOptionBuilder("16", "amount_16", "Buy 16 items"),
-					new SelectMenuOptionBuilder("17", "amount_17", "Buy 17 item"),
-					new SelectMenuOptionBuilder("18", "amount_18", "Buy 18 items"),
-					new SelectMenuOptionBuilder("19", "amount_19", "Buy 19 item"),
-					new SelectMenuOptionBuilder("20", "amount_20", "Buy 20 items"),
-					new SelectMenuOptionBuilder("21", "amount_21", "Buy 21 item"),
-					new SelectMenuOptionBuilder("22", "amount_22", "Buy 22 items"),
-					new SelectMenuOptionBuilder("23", "amount_23", "Buy 23 item"),
-					new SelectMenuOptionBuilder("24", "amount_24", "Buy 24 items"),
-					new SelectMenuOptionBuilder("25", "amount_25", "Buy 25 item"),
-				},
-				placeholder: "Amount" // The text shown before selection
+				customId: "buymenu_amountselector",
+				options: quantityOptions,
+				placeholder: placeHolder
 		);
 
-		builder.WithButton("Buy", customId: $"TryBuy", emote: new Emoji("\u2B05"), style: ButtonStyle.Success, disabled: player.Gold < item.DbMeta.ActualCost);
-		builder.WithButton("Cancel", customId: $"Cancel", emote: new Emoji("\u27A1"), style: ButtonStyle.Danger);
+		string buyButtonText = null;
+		if (currentAmountSelected <= 0) buyButtonText = "Select a quantity";
+		else if (currentAmountSelected == 1) buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}";
+		else if (currentAmountSelected > 1) buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}'s";
+
+
+		builder.WithButton(buyButtonText, customId: $"buymenu_buy_{shopkeeper.Player.Id}_{currentAmountSelected}", emote: new Emoji("\u2B05"), style: ButtonStyle.Success, disabled: (player.Gold < item.DbMeta.ActualCost) || (currentAmountSelected <= 0));
+		builder.WithButton("Cancel", customId: $"buymenu_cancel", emote: new Emoji("\u27A1"), style: ButtonStyle.Danger);
 
 		return (embed.Build(), builder.Build());
 	}

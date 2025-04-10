@@ -4,6 +4,7 @@ using Discord.WebSocket;
 using Hackathon.Managers.Inventory;
 using Hackathon.Managers.Shop;
 using Microsoft.Extensions.Logging;
+using System.Configuration;
 using System.Reflection;
 
 namespace Hackathon.Services;
@@ -30,10 +31,12 @@ public class InteractionHandler
 	private readonly PlayerService _playerService;
 	private readonly PlayerProfileService _profileService;
 
+	private readonly InventoryService _inventoryService;
+
 	public delegate void BotResponseEvent(object sender, BotResponseArgs e);
 	public event BotResponseEvent? OnPostBotMention;
 
-	public InteractionHandler(DiscordSocketClient client, InteractionService interactionService, IServiceProvider services, ILogger<InteractionHandler> logger, OpenAIService openAiService, DatabaseService dbService, PlayerService playerService, PlayerProfileService profileService)
+	public InteractionHandler(DiscordSocketClient client, InteractionService interactionService, IServiceProvider services, ILogger<InteractionHandler> logger, OpenAIService openAiService, DatabaseService dbService, PlayerService playerService, PlayerProfileService profileService, InventoryService inventoryService)
 	{
 		_interactionService = interactionService;
 		_client = client;
@@ -43,6 +46,7 @@ public class InteractionHandler
 		_database = dbService;
 		_playerService = playerService;
 		_profileService = profileService;
+		_inventoryService = inventoryService;
 
 		// events
 		_client.ButtonExecuted += ButtonHandler;
@@ -83,7 +87,8 @@ public class InteractionHandler
 
 	private async Task ButtonHandler(SocketMessageComponent component)
 	{
-		Console.Out.WriteLine(component.User.GlobalName + ": " + component.Data.CustomId);
+		//Console.Out.WriteLine(component.User.GlobalName + ": " + component.Data.CustomId);
+		_logger.LogInformation($"{component.User.GlobalName}: {component.Data.CustomId}");
 		// Inv nav
 		if (component.Data.CustomId.StartsWith("inventory_page_") ||
 		component.Data.CustomId.StartsWith("inventory_filtered_"))
@@ -93,23 +98,43 @@ public class InteractionHandler
 		else if (component.Data.CustomId.StartsWith("shop_page_") ||
 		 component.Data.CustomId.StartsWith("shop_filtered_"))
 		{
-
-			if (component.Data.CustomId.EndsWith("buy"))
-			{
-				await HandleShopBuyStartButton(component);
-			}
-			else
-			{
-				// nav
-				await HandleShopPageNavigation(component);
-			}
-
+			await HandleShopPageNavigation(component);
+		}
+		else if (component.Data.CustomId.StartsWith("openbuy_"))
+		{
+			await HandleShopBuyStartButton(component);
 		}
 	}
 
 	private async Task HandleShopBuyStartButton(SocketMessageComponent component)
 	{
-		await component.RespondAsync("Buy button pressed", ephemeral: true);
+		var parts = component.Data.CustomId.Split('_');
+		//await component.RespondAsync("Buy button pressed", ephemeral: true);
+		// openbuy_{sellerDiscordID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
+
+		string sellerDiscordId = parts[1];
+		string itemId = parts[2];// define what I actuall mean by this.
+		string buyerDiscordId = component.User.Id.ToString();// This is who interacted with the button
+
+		var player = _playerService.GetByDiscordId(buyerDiscordId);
+		var shop = _profileService.GetProfileByDiscordId(sellerDiscordId);
+		var shopItem = _inventoryService.GetInventoryItemStack(Int32.Parse(itemId), ulong.Parse(sellerDiscordId));
+		//var item
+
+		var result = ShopManager.Instance.BuildBuyInteract(
+			_client, player, shopItem, shop
+
+		);
+
+		if (result == null)
+		{
+			await component.RespondAsync("No matching items.---SOMETHING WENT WRONG AAH", ephemeral: true);
+			return;
+		}
+
+		var (embed, components) = result.Value;
+		await component.RespondAsync(embed: embed, components: components, ephemeral: true);
+
 		return;
 	}
 

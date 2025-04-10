@@ -79,13 +79,13 @@ public class ShopManager
 		bool detailed,
 		string? filter = null)
 	{
-		var player = playerService.GetByDiscordId(user.Id.ToString());
-		if (player == null) return null;
+		var seller = playerService.GetByDiscordId(user.Id.ToString());
+		if (seller == null) return null;
 
-		var profile = profileService.GetProfile(player.Id);
-		if (profile?.Inventory == null || profile.Inventory.Items.Count == 0) return null;
+		var sellerProfile = profileService.GetProfile(seller.Id);
+		if (sellerProfile?.Inventory == null || sellerProfile.Inventory.Items.Count == 0) return null;
 
-		var items = profile.Inventory.Items;
+		var items = sellerProfile.Inventory.Items;
 
 		// Apply multi-term filter if present
 		if (!string.IsNullOrWhiteSpace(filter))
@@ -113,10 +113,16 @@ public class ShopManager
 		// For compact view, use a generic title; detailed view is set per item.
 		var embed = new EmbedBuilder()
 			.WithAuthor(user)
-			.WithTitle(detailed ? "" : $"{profile.Player.Name}'s Shop Inventory")
+			.WithTitle(detailed ? "" : $"{sellerProfile.Player.Name}'s Shop Inventory")
 			.WithFooter($"Page {pageIndex + 1} of {totalPages}")
 			.WithColor(Color.DarkGreen);
 
+		ItemStack? displayedItem = null;// If we are on detailed view, we will store the item here
+										// If this is false, we are either on list view, OR its an empty inventory
+										// But the empty inventory is NEVER the case, as we check for that in our return clauses
+
+		// Note while this while loop may seem EXTREMELY bad. It should be noted, on detail view, the pagedItem.Len is 1
+		// So this only loops once in that case
 		foreach (var item in pagedItems)
 		{
 			string tags = item.Item.Tags.Any() ? string.Join(", ", item.Item.Tags.Select(t => t.Label)) : "None";
@@ -127,16 +133,18 @@ public class ShopManager
 				embed.Title = item.Item.DbReference.Name;
 				embed.Description = item.Item.DbReference.LongDescription ?? "No description.";
 				embed.WithImageUrl(item.Item.DbReference.ImgUrl ?? "");
-				embed.AddField("Amount:", item.DbReference.Amount, true);
-				embed.AddField("Cost", $"{item.DbReference.ActualCost} gp", true);
+				embed.AddField("Amount:", item.DbMeta.Amount, true);
+				embed.AddField("Cost", $"{item.DbMeta.ActualCost} gp", true);
 				embed.AddField("Weight", item.Item.DbReference.Weight.ToString(), true);
 				embed.AddField("Tags", tags, false);
+
+				displayedItem = item;
 			}
 			else
 			{
 				// Compact view: list items with basic info.
 				embed.AddField(item.Item.DbReference.Name,
-					$"Cost: {item.DbReference.ActualCost} | Weight: {item.Item.DbReference.Weight}\nTags: {tags}", false);
+					$"Cost: {item.DbMeta.ActualCost} | Weight: {item.Item.DbReference.Weight}\nTags: {tags}", false);
 			}
 		}
 
@@ -147,12 +155,16 @@ public class ShopManager
 
 		var builder = new ComponentBuilder();
 
-
+		// Nav
 		builder.WithButton(" ", customId: $"{baseId}_{pageIndex - 1}", emote: new Emoji("\u2B05"), disabled: pageIndex == 0);
 		builder.WithButton(" ", customId: $"{baseId}_{pageIndex + 1}", emote: new Emoji("\u27A1"), disabled: pageIndex == totalPages - 1);
 
+		// Buy
 		if (detailed)
-			builder.WithButton(" ", customId: $"{baseId}_buy", emote: new Emoji("\uD83D\uDC4C"));
+		{
+			// openbuy_{sellerDiscordID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
+			builder.WithButton(" ", customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}", emote: new Emoji("\uD83D\uDC4C"));
+		}
 
 		return (embed.Build(), builder.Build());
 	}
@@ -169,11 +181,12 @@ public class ShopManager
 	)
 	{
 		// At the end, we must somehow delete the shop message or something. Or have a retry if fail saying either the item no longer exists/already bought or the quanity changed.
+		if (shopkeeper == null) throw new ArgumentNullException(nameof(shopkeeper));
 
 		var shopUser = client.GetUser(shopkeeper.Player.DiscordId);
 
 		var embed = new EmbedBuilder()
-			.WithAuthor(shopUser)
+			/*.WithAuthor(shopUser)*/
 			.WithTitle(item.Item.DbReference.Name)
 			.WithFooter("Xolobob sends his regards")
 			.WithColor(Color.Blue);
@@ -184,11 +197,9 @@ public class ShopManager
 		// Detailed (big) view shows one item with full info.
 		embed.Title = item.Item.DbReference.Name;
 		embed.Description = item.Item.DbReference.LongDescription ?? "No description.";
-		embed.WithImageUrl(item.Item.DbReference.ImgUrl ?? "");
-		embed.AddField("Amount:", item.DbReference.Amount, true);
-		embed.AddField("Cost", $"{item.DbReference.ActualCost} gp", true);
-		embed.AddField("Weight", item.Item.DbReference.Weight.ToString(), true);
-		embed.AddField("Tags", tags, false);
+		embed.WithThumbnailUrl(item.Item.DbReference.ImgUrl ?? "");
+		embed.AddField("Price-Per-Unit:", item.DbMeta.ActualCost + "gp", false);
+		embed.AddField("Your Gold Available:", player.Gold + "gp", false);
 
 		/*string baseId = !string.IsNullOrWhiteSpace(filter)
 			? $"shop_filtered_{filter}_{(detailed ? "detailed" : "compact")}_{user.Id}"
@@ -196,9 +207,45 @@ public class ShopManager
 
 		var builder = new ComponentBuilder();
 
+		// generate amount list.
+		// Either loop and do an option for 1...n
+		// Or do basic operations like 1, 2, 4, 8, 10
 
-		/*builder.WithButton(" ", customId: $"{baseId}_{pageIndex - 1}", emote: new Emoji("\u2B05"), disabled: pageIndex == 0);
-		builder.WithButton(" ", customId: $"{baseId}_{pageIndex + 1}", emote: new Emoji("\u27A1"), disabled: pageIndex == totalPages - 1);*/
+		builder.WithSelectMenu(
+				customId: "amount_select",
+				options: new List<SelectMenuOptionBuilder>
+				{
+					new SelectMenuOptionBuilder("1", "amount_1", "Buy 1 item"),
+					new SelectMenuOptionBuilder("2", "amount_2", "Buy 2 items"),
+					new SelectMenuOptionBuilder("3", "amount_3", "Buy 3 item"),
+					new SelectMenuOptionBuilder("4", "amount_4", "Buy 4 items"),
+					new SelectMenuOptionBuilder("5", "amount_5", "Buy 5 item"),
+					new SelectMenuOptionBuilder("6", "amount_6", "Buy 6 items"),
+					new SelectMenuOptionBuilder("7", "amount_7", "Buy 7 item"),
+					new SelectMenuOptionBuilder("8", "amount_8", "Buy 8 items"),
+					new SelectMenuOptionBuilder("9", "amount_9", "Buy 9 item"),
+					new SelectMenuOptionBuilder("10", "amount_10", "Buy 10 items"),
+					new SelectMenuOptionBuilder("11", "amount_11", "Buy 11 item"),
+					new SelectMenuOptionBuilder("12", "amount_12", "Buy 12 items"),
+					new SelectMenuOptionBuilder("13", "amount_13", "Buy 13 item"),
+					new SelectMenuOptionBuilder("14", "amount_14", "Buy 14 items"),
+					new SelectMenuOptionBuilder("15", "amount_15", "Buy 15 item"),
+					new SelectMenuOptionBuilder("16", "amount_16", "Buy 16 items"),
+					new SelectMenuOptionBuilder("17", "amount_17", "Buy 17 item"),
+					new SelectMenuOptionBuilder("18", "amount_18", "Buy 18 items"),
+					new SelectMenuOptionBuilder("19", "amount_19", "Buy 19 item"),
+					new SelectMenuOptionBuilder("20", "amount_20", "Buy 20 items"),
+					new SelectMenuOptionBuilder("21", "amount_21", "Buy 21 item"),
+					new SelectMenuOptionBuilder("22", "amount_22", "Buy 22 items"),
+					new SelectMenuOptionBuilder("23", "amount_23", "Buy 23 item"),
+					new SelectMenuOptionBuilder("24", "amount_24", "Buy 24 items"),
+					new SelectMenuOptionBuilder("25", "amount_25", "Buy 25 item"),
+				},
+				placeholder: "Amount" // The text shown before selection
+		);
+
+		builder.WithButton("Buy", customId: $"TryBuy", emote: new Emoji("\u2B05"), style: ButtonStyle.Success, disabled: player.Gold < item.DbMeta.ActualCost);
+		builder.WithButton("Cancel", customId: $"Cancel", emote: new Emoji("\u27A1"), style: ButtonStyle.Danger);
 
 		return (embed.Build(), builder.Build());
 	}

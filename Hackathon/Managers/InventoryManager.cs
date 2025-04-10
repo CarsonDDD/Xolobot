@@ -67,10 +67,10 @@ public class InventoryManager
                 // Detailed view shows one item with full info
                 embed.Title = item.Item.DbReference.Name;
                 embed.Description = item.Item.DbReference.LongDescription ?? "No description.";
-                embed.Description += "\n\n**Amount:** " + item.DbReference.Amount;
+                embed.Description += "\n\n**Amount:** " + item.DbMeta.Amount;
                 embed.WithImageUrl(item.Item.DbReference.ImgUrl ?? "");
                 //embed.AddField("‎ ", "**Amount:** " + item.DbReference.Amount, false);
-                embed.AddField("‎ ", $"**Cost:** {item.DbReference.ActualCost} gp", true);
+                embed.AddField("‎ ", $"**Cost:** {item.DbMeta.ActualCost} gp", true);
                 embed.AddField("‎ ", "**Weight:** " + item.Item.DbReference.Weight.ToString(), true);
                 embed.AddField("Tags", tags, false);
             }
@@ -78,7 +78,7 @@ public class InventoryManager
             {
                 // Compact view: list items in a field
                 embed.AddField(item.Item.DbReference.Name,
-                    $"Cost: {item.DbReference.ActualCost} | Weight: {item.Item.DbReference.Weight}\nTags: {tags}", false);
+                    $"Cost: {item.DbMeta.ActualCost} | Weight: {item.Item.DbReference.Weight}\nTags: {tags}", false);
             }
         }
 

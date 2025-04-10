@@ -8,6 +8,7 @@ public class ItemService
 {
     private readonly DatabaseService _db;
 
+    // USED FOR GENERAL LOOSE ITEMS REFERCING THE LEDGER, IF YOU WANT TO LOOK FOR ITEMS IN AN INVENTORY USE InventoryService
     public ItemService(DatabaseService db)
     {
         _db = db;
@@ -44,16 +45,5 @@ public class ItemService
             DbReference = item,
             Tags = tags
         };
-    }
-
-    // Both these functions may be useless, as we can easily get this info from the PlayerProfile DomainObj....However, for single lookups this may be faster 
-    public ItemStack? GetInventoryDisplayItem(int itemId, int playerId)
-    {
-        return null;
-    }
-
-    public ItemStack? GetInventoryDisplayItem(int itemId, ulong discordId)
-    {
-        return null;
     }
 }

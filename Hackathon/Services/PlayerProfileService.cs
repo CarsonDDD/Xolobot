@@ -74,7 +74,7 @@ public class PlayerProfileService
                 // Build the InventoryDisplayItem including the quantity and actual cost.
                 displayList.Add(new ItemStack
                 {
-                    DbReference = invItem,
+                    DbMeta = invItem,
                     Item = itemWithTags,
                 });
             }
@@ -95,5 +95,19 @@ public class PlayerProfileService
             }
         };
     }
+
+    public PlayerProfile? GetProfileByDiscordId(string discordId)
+    {
+        using var conn = _db.GetConnection();
+
+        var player = conn.QuerySingleOrDefault<Player>(
+            "SELECT * FROM Player WHERE discordId = @discordId",
+            new { discordId }
+        );
+        if (player == null) return null;
+
+        return GetProfile(player.Id);
+    }
+
 }
 

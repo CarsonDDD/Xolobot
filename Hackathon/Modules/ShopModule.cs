@@ -26,7 +26,7 @@ public class ShopModule : ModuleBase
 		// open buy menu. No raw commands!
 		// verify item, if not exist, tell user and default to first item
 
-		await DeferAsync();
+		await DeferAsync(ephemeral: true);
 
 		ItemStack? startingItem = null;
 		var shopKeeper = _profileService.GetProfileByDiscordId(ShopManager.SHOP_DISCORD_ID.ToString());

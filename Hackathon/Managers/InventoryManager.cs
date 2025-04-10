@@ -90,15 +90,15 @@ public class InventoryManager
         var builder = new ComponentBuilder();
 
         // Always show nav buttons
-        builder.WithButton(" ", customId: $"{baseId}_{pageIndex - 1}", emote: new Emoji("\u2B05"), disabled: pageIndex == 0);
-        builder.WithButton(" ", customId: $"{baseId}_{pageIndex + 1}", emote: new Emoji("\u27A1"), disabled: pageIndex == totalPages - 1);
+        builder.WithButton("🡄", customId: $"{baseId}_{pageIndex - 1}"/*, emote: new Emoji("\u2B05")*/, style: ButtonStyle.Secondary, disabled: pageIndex == 0);
+        builder.WithButton("🡆", customId: $"{baseId}_{pageIndex + 1}"/*, emote: new Emoji("\u27A1")*/, style: ButtonStyle.Secondary, disabled: pageIndex == totalPages - 1);
 
         if (detailed)
         {
             // item id.....
             //itemInQuestion.Item.Id
             string sellId = $"inventory_sell_{user.Id}_{items[pageIndex].Item.DbReference.Id}";// Note this is refencing item and NOT inventory item... Is this bad?
-            builder.WithButton(" ", customId: sellId, emote: new Emoji("\uD83D\uDC4C"));
+            builder.WithButton("Sell", customId: sellId, style: ButtonStyle.Success, emote: new Emoji("💰"));
         }
 
         return (embed.Build(), builder.Build());

@@ -168,15 +168,15 @@ public class ShopManager
 		var builder = new ComponentBuilder();
 
 		// Nav
-		builder.WithButton(" ", customId: $"{baseId}_{pageIndex - 1}", emote: new Emoji("\u2B05"), disabled: pageIndex == 0);
-		builder.WithButton(" ", customId: $"{baseId}_{pageIndex + 1}", emote: new Emoji("\u27A1"), disabled: pageIndex == totalPages - 1);
+		builder.WithButton("🡄", customId: $"{baseId}_{pageIndex - 1}"/*, emote: new Emoji("\u2B05")*/, style: ButtonStyle.Secondary, disabled: pageIndex == 0);
+		builder.WithButton("🡆", customId: $"{baseId}_{pageIndex + 1}"/*, emote: new Emoji("\u27A1")*/, style: ButtonStyle.Secondary, disabled: pageIndex == totalPages - 1);
 
 		// Buy
 		if (detailed)
 		{
 			// openbuy_{sellerDiscordID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
 			int startingAmount = 0;
-			builder.WithButton(" ", customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}_{startingAmount}_{filterParam}", emote: new Emoji("\uD83D\uDC4C"));
+			builder.WithButton("Select", customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}_{startingAmount}_{filterParam}", style: ButtonStyle.Success, emote: new Emoji("🏷️"));
 		}
 
 		return (embed.Build(), builder.Build());
@@ -283,8 +283,9 @@ public class ShopManager
 		else if (currentAmountSelected > 1) buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}'s";
 
 
-		builder.WithButton(buyButtonText, customId: $"buymenu_buy_{shopKeeper.Player.Id}_{currentAmountSelected}", emote: new Emoji("\u2B05"), style: ButtonStyle.Success, disabled: (player.Gold < item.DbMeta.ActualCost) || (currentAmountSelected <= 0));
-		builder.WithButton("Cancel", customId: $"buymenu_cancel", emote: new Emoji("\u27A1"), style: ButtonStyle.Danger);
+		builder.WithButton(buyButtonText, customId: $"buymenu_buy_{shopKeeper.Player.Id}_{currentAmountSelected}", emote: new Emoji("📦"), style: ButtonStyle.Success, disabled: (player.Gold < item.DbMeta.ActualCost) || (currentAmountSelected <= 0));
+		builder.WithButton("Haggle", customId: $"buymenu_haggle", emote: new Emoji("🤌"), style: ButtonStyle.Primary, disabled: (player.Gold < item.DbMeta.ActualCost) || (currentAmountSelected <= 0));
+		//builder.WithButton("✘ Cancel", customId: $"buymenu_cancel", emote: new Emoji("🙅‍♂️"), style: ButtonStyle.Danger);
 
 		return (embed.Build(), builder.Build());
 	}

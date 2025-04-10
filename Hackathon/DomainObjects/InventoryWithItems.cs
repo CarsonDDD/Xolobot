@@ -43,4 +43,3 @@ public class ItemStack
     public InventoryItem DbMeta { get; set; } // Contains inventory meta for the item (quantity, local price for the items in the stack)
     public ItemWithTags Item { get; set; }// compound Item from db
 }
-

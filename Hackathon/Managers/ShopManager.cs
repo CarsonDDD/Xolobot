@@ -38,7 +38,7 @@ public class ShopManager
 		return playerProfileService.GetProfile(SHOP_DB_ID);
 	}
 
-	public List<InventoryDisplayItem> GetShopInventory(PlayerProfileService playerProfileService, string? filter = null)
+	public List<ItemStack> GetShopInventory(PlayerProfileService playerProfileService, string? filter = null)
 	{
 		var inv = GetShopkeeper(playerProfileService).Inventory;
 		// Filter goes here
@@ -158,17 +158,49 @@ public class ShopManager
 	}
 
 
-	/*public (Embed embed, MessageComponent components)? BuildBuyInteract(
+	public (Embed embed, MessageComponent components)? BuildBuyInteract(
 		// item
 		// user/buyer reference????---no we only care about this in the actual button press---However, displaying the player info may be helpful?
 		// shopkeeper reference
+		DiscordSocketClient client,
 		Player player,
-
-
+		ItemStack item,
+		PlayerProfile shopkeeper
 	)
 	{
-
 		// At the end, we must somehow delete the shop message or something. Or have a retry if fail saying either the item no longer exists/already bought or the quanity changed.
-	}*/
+
+		var shopUser = client.GetUser(shopkeeper.Player.DiscordId);
+
+		var embed = new EmbedBuilder()
+			.WithAuthor(shopUser)
+			.WithTitle(item.Item.DbReference.Name)
+			.WithFooter("Xolobob sends his regards")
+			.WithColor(Color.Blue);
+
+
+		string tags = item.Item.Tags.Any() ? string.Join(", ", item.Item.Tags.Select(t => t.Label)) : "None";
+
+		// Detailed (big) view shows one item with full info.
+		embed.Title = item.Item.DbReference.Name;
+		embed.Description = item.Item.DbReference.LongDescription ?? "No description.";
+		embed.WithImageUrl(item.Item.DbReference.ImgUrl ?? "");
+		embed.AddField("Amount:", item.DbReference.Amount, true);
+		embed.AddField("Cost", $"{item.DbReference.ActualCost} gp", true);
+		embed.AddField("Weight", item.Item.DbReference.Weight.ToString(), true);
+		embed.AddField("Tags", tags, false);
+
+		/*string baseId = !string.IsNullOrWhiteSpace(filter)
+			? $"shop_filtered_{filter}_{(detailed ? "detailed" : "compact")}_{user.Id}"
+			: $"shop_page_{(detailed ? "detailed" : "compact")}_{user.Id}";*/
+
+		var builder = new ComponentBuilder();
+
+
+		/*builder.WithButton(" ", customId: $"{baseId}_{pageIndex - 1}", emote: new Emoji("\u2B05"), disabled: pageIndex == 0);
+		builder.WithButton(" ", customId: $"{baseId}_{pageIndex + 1}", emote: new Emoji("\u27A1"), disabled: pageIndex == totalPages - 1);*/
+
+		return (embed.Build(), builder.Build());
+	}
 
 }

@@ -1,4 +1,6 @@
 using Dapper;
+using Discord;
+using Discord.WebSocket;
 using Hackathon.Entities;
 
 namespace Hackathon.Services;
@@ -7,9 +9,12 @@ public class PlayerService
 {
     private readonly DatabaseService _db;
 
-    public PlayerService(DatabaseService db)
+    private readonly DiscordSocketClient _client;
+
+    public PlayerService(DatabaseService db, DiscordSocketClient discord)
     {
         _db = db;
+        _client = discord;
     }
 
     public Player? GetById(int id)
@@ -30,4 +35,3 @@ public class PlayerService
         return conn.Query<Player>("SELECT * FROM Player");
     }
 }
-

@@ -45,11 +45,11 @@ public class PlayerProfileService
         var inventory = conn.QuerySingleOrDefault<Inventory>(
             "SELECT * FROM Inventory WHERE player_id = @id", new { id = playerId });
 
-        List<InventoryDisplayItem> displayList = new();//List<ItemWithTags> itemList = new();
+        List<ItemStack> displayList = new();//List<ItemWithTags> itemList = new();
 
         if (inventory != null)
         {
-            var inventoryItems = conn.Query<ItemStack>(
+            var inventoryItems = conn.Query<InventoryItem>(
                 "SELECT * FROM InventoryItem WHERE inventory_id = @invId", new { invId = inventory.Id }).ToList();
 
             foreach (var invItem in inventoryItems)
@@ -72,7 +72,7 @@ public class PlayerProfileService
                 };
 
                 // Build the InventoryDisplayItem including the quantity and actual cost.
-                displayList.Add(new InventoryDisplayItem
+                displayList.Add(new ItemStack
                 {
                     DbReference = invItem,
                     Item = itemWithTags,

@@ -1,4 +1,6 @@
+using Discord;
 using Hackathon.Entities;
+using Hackathon.Services;
 
 namespace Hackathon.DomainObjects;
 

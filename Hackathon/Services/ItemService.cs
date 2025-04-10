@@ -47,12 +47,12 @@ public class ItemService
     }
 
     // Both these functions may be useless, as we can easily get this info from the PlayerProfile DomainObj....However, for single lookups this may be faster 
-    public InventoryDisplayItem? GetInventoryDisplayItem(int itemId, int playerId)
+    public ItemStack? GetInventoryDisplayItem(int itemId, int playerId)
     {
         return null;
     }
 
-    public InventoryDisplayItem? GetInventoryDisplayItem(int itemId, ulong discordId)
+    public ItemStack? GetInventoryDisplayItem(int itemId, ulong discordId)
     {
         return null;
     }

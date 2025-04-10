@@ -5,7 +5,7 @@ namespace Hackathon.DomainObjects;
 public class InventoryWithItems
 {
     public Inventory Inventory { get; set; }
-    public List<InventoryDisplayItem> Items { get; set; }
+    public List<ItemStack> Items { get; set; }
 }
 
 public class ItemWithTags
@@ -14,9 +14,9 @@ public class ItemWithTags
     public List<Tag> Tags { get; set; }
 }
 
-public class InventoryDisplayItem
+public class ItemStack
 {
-    public ItemStack DbReference { get; set; } // Contains inventory meta for the item (quantity, local price for the items in the stack)
+    public InventoryItem DbReference { get; set; } // Contains inventory meta for the item (quantity, local price for the items in the stack)
     public ItemWithTags Item { get; set; }// compound Item from db
 }
 

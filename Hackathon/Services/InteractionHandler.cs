@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using MongoDB.Driver;
 using System.Configuration;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Hackathon.Services;
 
@@ -114,7 +115,7 @@ public class InteractionHandler
 			return;
 		}
 
-		string buyerDiscordId = parts[1];
+		string buyerDiscordId = ShopManager.SHOP_DISCORD_ID.ToString();//parts[1];
 		string itemId = parts[2];
 		string sellerDiscordId = component.User.Id.ToString();// This is who interacted with the button
 		int startingAmount = int.Parse(parts[3]);
@@ -421,7 +422,9 @@ public class InteractionHandler
 			if (!int.TryParse(parts[4], out pageIndex)) return;
 		}
 
-		var user = _client.GetUser(userId);
+		//var user = _client.GetUser(userId);
+		var user = await GetGuildUserAsync(component, userId);
+
 		if (user == null) return;
 
 		var result = InventoryManager.Instance.BuildInventoryPage(
@@ -446,6 +449,29 @@ public class InteractionHandler
 			msg.Embed = embed;
 			msg.Components = components;
 		});
+	}
+
+	private async Task<IUser> GetGuildUserAsync(SocketMessageComponent component, ulong userId)
+	{
+		var guildChannel = component.Channel as SocketGuildChannel;
+
+		if (guildChannel != null)
+		{
+			IGuild iGuild = guildChannel.Guild;
+
+			if (iGuild != null)
+			{
+				var guildUser = await iGuild.GetUserAsync(userId);
+				if (guildUser != null)
+					return guildUser;
+			}
+		}
+
+		IUser cachedUser = _client.GetUser(userId);
+		if (cachedUser != null)
+			return cachedUser;
+
+		return await _client.Rest.GetUserAsync(userId);
 	}
 
 	private async Task HandleShopPageNavigation(SocketMessageComponent component)
@@ -478,7 +504,8 @@ public class InteractionHandler
 			if (!int.TryParse(parts[4], out pageIndex)) return;
 		}
 
-		var user = _client.GetUser(userId);
+		var user = await GetGuildUserAsync(component, userId);
+		//var user = _client.GetUser(userId);
 		if (user == null) return;
 
 		var result = ShopManager.Instance.BuildShopPage(

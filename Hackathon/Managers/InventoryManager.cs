@@ -28,6 +28,7 @@ public class InventoryManager
         var profile = profileService.GetProfile(player.Id);
         if (profile?.Inventory == null || profile.Inventory.Items.Count == 0) return null;
 
+
         var items = profile.Inventory.Items;
 
         // Apply multi-term filter if present
@@ -43,16 +44,7 @@ public class InventoryManager
             items = profile.Inventory.FilterList(terms);
         }
 
-        if (items.Count == 0)
-        {
-            var emptyEmbed = new EmbedBuilder()
-                .WithTitle("Nothing Available!")
-                .WithDescription("There are no items available with the specified search criteria.\nPlease try a different search or check back later.")
-                .WithColor(Color.DarkRed)
-                .Build();
-
-            return (emptyEmbed, new ComponentBuilder().Build());
-        }
+        if (items.Count == 0) return (ItemManager.Instance.CreateItemNotFound().Build(), new ComponentBuilder().Build());
 
         // Use the detailed parameter solely to control view style:
         // If detailed is true, show one item per page regardless of filtering.
@@ -61,40 +53,17 @@ public class InventoryManager
         pageIndex = Math.Clamp(pageIndex, 0, totalPages - 1);
 
         var pagedItems = items.Skip(pageIndex * itemsPerPage).Take(itemsPerPage);
+        ItemStack? displayedItem = pagedItems.First();
 
-        var embed = new EmbedBuilder()
-            .WithAuthor(user)
-            .WithTitle($"{profile.Player.Name}'s Inventory")
-            .WithFooter($"Page {pageIndex + 1} of {totalPages}")
-            .WithColor(Color.DarkGreen);
+        string footer = filter == null ?
+        $"Page {pageIndex + 1} of {totalPages}"
+        :
+        $"Page {pageIndex + 1} of {totalPages} — for '{filter}'";
 
-        ItemStack? displayedItem = null;
+        string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Inventory";
+        var embed = ItemManager.Instance.CreateDetailedDisplay(user, displayedItem, authorName, footer);
+        embed.WithColor(Color.Blue);// example of override
 
-        foreach (var item in pagedItems)
-        {
-            string tags = item.Item.Tags.Any() ? string.Join(", ", item.Item.Tags.Select(t => t.Label)) : "None";
-
-            if (detailed)
-            {
-                // Detailed view shows one item with full info
-                embed.Title = item.Item.DbReference.Name;
-                embed.Description = item.Item.DbReference.LongDescription ?? "No description.";
-                embed.Description += "\n\n**Amount:** " + item.DbMeta.Amount;
-                embed.WithImageUrl(item.Item.DbReference.ImgUrl ?? "");
-                //embed.AddField("‎ ", "**Amount:** " + item.DbReference.Amount, false);
-                embed.AddField("‎ ", $"**Cost:** {item.DbMeta.ActualCost} gp", true);
-                embed.AddField("‎ ", "**Weight:** " + item.Item.DbReference.Weight.ToString(), true);
-                embed.AddField("Tags", tags, false);
-
-                displayedItem = item;
-            }
-            else
-            {
-                // Compact view: list items in a field
-                embed.AddField(item.Item.DbReference.Name,
-                    $"Cost: {item.DbMeta.ActualCost} | Weight: {item.Item.DbReference.Weight}\nTags: {tags}", true);
-            }
-        }
 
         string filterParam = !string.IsNullOrWhiteSpace(filter) ? filter : "";
 
@@ -111,9 +80,7 @@ public class InventoryManager
 
         if (detailed)
         {
-            // item id.....
-            //itemInQuestion.Item.Id
-            string sellId = $"opensell_{player.DiscordId}_{displayedItem.Item.DbReference.Id}_1_{filterParam}";
+            string sellId = $"opensell_{ShopManager.SHOP_DISCORD_ID}_{displayedItem.Item.DbReference.Id}_1_{filterParam}";
             builder.WithButton($"Show {playerService.GetByDiscordId(ShopManager.SHOP_DISCORD_ID.ToString()).Name}", customId: sellId, style: ButtonStyle.Success, emote: new Emoji("🏚️"));
         }
 

@@ -7,6 +7,7 @@ using Hackathon.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace Hackathon.Managers.Shop;
@@ -87,7 +88,7 @@ public class ShopManager
 
 		var items = sellerProfile.Inventory.Items;
 
-		// Apply multi-term filter if present
+		// Decode filter
 		if (!string.IsNullOrWhiteSpace(filter))
 		{
 			filter = filter.Replace("_", "");// sanitize
@@ -100,16 +101,7 @@ public class ShopManager
 			items = sellerProfile.Inventory.FilterList(terms);
 		}
 
-		if (items.Count == 0)
-		{
-			var emptyEmbed = new EmbedBuilder()
-				.WithTitle("Nothing Available!")
-				.WithDescription("There are no items available with the specified search criteria.\nPlease try a different search or check back later.")
-				.WithColor(Color.DarkRed)
-				.Build();
-
-			return (emptyEmbed, new ComponentBuilder().Build());
-		}
+		if (items.Count == 0) return (ItemManager.Instance.CreateItemNotFound().Build(), new ComponentBuilder().Build());
 
 		// Regardless of filtering, detailed view is only when detailed=true.
 		int itemsPerPage = detailed ? 1 : InventoryManager.ITEMS_PER_PAGE;
@@ -117,47 +109,17 @@ public class ShopManager
 		pageIndex = Math.Clamp(pageIndex, 0, totalPages - 1);
 
 		var pagedItems = items.Skip(pageIndex * itemsPerPage).Take(itemsPerPage);
+		ItemStack? displayedItem = pagedItems.First();
 
-		// For compact view, use a generic title; detailed view is set per item.
-		var embed = new EmbedBuilder()
-			.WithAuthor(user)
-			.WithTitle(detailed ? "" : $"{sellerProfile.Player.Name}'s Shop Inventory")
-			.WithFooter($"Page {pageIndex + 1} of {totalPages}")
-			.WithColor(Color.DarkGreen);
+		string footer = filter == null ?
+		$"Page {pageIndex + 1} of {totalPages}"
+		:
+		$"Page {pageIndex + 1} of {totalPages} — for '{filter}'";
 
-		ItemStack? displayedItem = null;// If we are on detailed view, we will store the item here
-										// If this is false, we are either on list view, OR its an empty inventory
-										// But the empty inventory is NEVER the case, as we check for that in our return clauses
-
-		// Note while this while loop may seem EXTREMELY bad. It should be noted, on detail view, the pagedItem.Len is 1
-		// So this only loops once in that case
-		foreach (var item in pagedItems)
-		{
-			string tags = item.Item.Tags.Any() ? string.Join(", ", item.Item.Tags) : "None";
-
-			if (detailed)
-			{
-				// Detailed (big) view shows one item with full info.
-				embed.Title = item.Item.DbReference.Name;
-				embed.Description = item.Item.DbReference.LongDescription ?? "No description.";
-				embed.WithImageUrl(item.Item.DbReference.ImgUrl ?? "");
-				embed.AddField("Amount:", item.DbMeta.Amount, true);
-				embed.AddField("Cost", $"{item.DbMeta.ActualCost} gp", true);
-				embed.AddField("Weight", item.Item.DbReference.Weight.ToString(), true);
-				embed.AddField("Tags", tags, false);
-
-				displayedItem = item;
-			}
-			else
-			{
-				// Compact view: list items with basic info.
-				embed.AddField(item.Item.DbReference.Name,
-					$"Cost: {item.DbMeta.ActualCost} | Weight: {item.Item.DbReference.Weight}\nTags: {tags}", true);
-			}
-		}
+		string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Shop";
+		var embed = ItemManager.Instance.CreateDetailedDisplay(user, displayedItem, authorName, footer);
 
 		// Create a safe string representation of the filter.
-		// (If no filter is provided, this will be an empty string.)
 		string filterParam = !string.IsNullOrWhiteSpace(filter) ? filter : "";
 
 		// Incorporate the detailed flag into the custom ID.
@@ -174,7 +136,7 @@ public class ShopManager
 		// Buy
 		if (detailed)
 		{
-			// openbuy_{sellerDiscordID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
+			// openbuy_{non-componentIderactorDisocrdID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
 			int startingAmount = 0;
 			builder.WithButton("Select", customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}_{startingAmount}_{filterParam}", style: ButtonStyle.Success, emote: new Emoji("🏷️"));
 		}
@@ -185,9 +147,9 @@ public class ShopManager
 
 	public (Embed embed, MessageComponent components)? BuildBuyInteract(
 		DiscordSocketClient client,
-		Player player,
+		Player player, // Player calling this function
 		ItemStack? item,
-		PlayerProfile shopKeeper,
+		PlayerProfile shopKeeper, // The shopkeeper
 		string[] filter,
 		int currentAmountSelected = 0
 	)
@@ -199,39 +161,26 @@ public class ShopManager
 
 		if (shopItems.Items.Count == 0)
 		{
-			var emptyEmbed = new EmbedBuilder()
-				.WithTitle("Nothing Available!")
-				.WithDescription("There are no items available with the specified search criteria.\nPlease try a different search or check back later.\nfilter: " + string.Join(", ", filter))
-				.WithColor(Color.DarkRed)
-				.Build();
-
-			return (emptyEmbed, new ComponentBuilder().Build());
+			return (ItemManager.Instance.CreateItemNotFound()
+				.WithDescription("There are no items with the specified search criteria in the shop.\nPlease try a different search or check back later.").Build(),
+				new ComponentBuilder().Build()
+			);
 		}
 
-		var shopUser = client.GetUser(shopKeeper.Player.DiscordId);
 
 		//default to first is none was selected
-		if (item == null)
-		{
-			item = shopItems.Items[0];
-		}
-
+		if (item == null) item = shopItems.Items[0];
 		if (currentAmountSelected > item.DbMeta.Amount) currentAmountSelected = item.DbMeta.Amount;
 
 		int totalCost = item.DbMeta.ActualCost * Math.Max(0, currentAmountSelected);
 
-		var embed = new EmbedBuilder()
-			/*with author*/
-			.WithTitle("Buy: " + item.Item.DbReference.Name)
-			.WithDescription(item.Item.DbReference.LongDescription ?? "No description.")
-			.WithThumbnailUrl(item.Item.DbReference.ImgUrl ?? "")
-			.WithFooter($"Your Gold Available: {player.Gold} gp")
-			.WithColor(Color.Blue);
 
-
-		embed.AddField("Price-Per-Unit:", item.DbMeta.ActualCost + "gp", true);
+		var shopOwner = client.GetUser(ulong.Parse(shopKeeper.Player.DiscordId));
+		string authorName = ((shopOwner as IGuildUser)?.Nickname ?? shopOwner.Username) + "'s Shop";
+		var embed = ItemManager.Instance.CreateSmallDisplay(shopOwner, authorName, item, currentAmountSelected);
 		embed.AddField("Total Cost:", totalCost + "gp", true);
-
+		embed.WithColor(Color.Purple);
+		embed.WithFooter($"Your Gold Available: {player.Gold} gp");
 
 		var builder = new ComponentBuilder();
 
@@ -245,7 +194,7 @@ public class ShopManager
 		{
 			string itemName = shopItems.Items[i].Item.DbReference.Name;
 			int itemId = shopItems.Items[i].Item.DbReference.Id;
-			//openbuy_{sellerDiscordId}_{itemId}_0_{filterParam} // 0 as starting amount
+			//openbuy_{non-componentIderactorDisocrdID}_{itemId}_0_{filterParam} // 0 as starting amount
 			itemSelector.Add(new SelectMenuOptionBuilder(
 				label: itemName,
 				description: string.Join(", ", shopItems.Items[i].Item.Tags),
@@ -264,7 +213,7 @@ public class ShopManager
 		int maxQuant = Math.Min(25, item.DbMeta.Amount);// 25 is max
 		for (int i = 0; i < maxQuant; i++)
 		{
-			//openbuy_{sellerDiscordId}_{itemId}_{quantity}_{filterParam}
+			//openbuy_{non-componentIderactorDisocrdID}_{itemId}_{quantity}_{filterParam}
 			quantityOptions.Add(new SelectMenuOptionBuilder(
 				label: (i + 1).ToString(),
 				value: $"openbuy_{shopKeeper.Player.DiscordId}_{item.Item.DbReference.Id}_{i + 1}_{filterParam}"
@@ -323,9 +272,9 @@ public class ShopManager
 
 	public (Embed embed, MessageComponent components)? BuildSellInteract(
 		DiscordSocketClient client,
-		Player buyer,
+		Player buyer, // Shop keeper
 		ItemStack? currentItem,
-		PlayerProfile seller,
+		PlayerProfile seller, //player calling this function
 		string[] filter,
 		int currentAmountSelected = 0
 	)
@@ -335,45 +284,29 @@ public class ShopManager
 
 		InventoryWithItems sellInventory = seller.Inventory.FilteredInventory(filter);
 
+
 		if (sellInventory.Items.Count == 0)
 		{
-			var emptyEmbed = new EmbedBuilder()
-				.WithTitle("Nothing Found!")
-				.WithDescription("You have no items with the specified search criteria.\nPlease try a different search or check back later.")
-				.WithColor(Color.DarkRed)
-				.Build();
-
-			return (emptyEmbed, new ComponentBuilder().Build());
+			return (ItemManager.Instance.CreateItemNotFound()
+				.WithDescription("You have no items with the specified search criteria.\nPlease try a different search or check back later.").Build(),
+				new ComponentBuilder().Build()
+			);
 		}
-
-		/*var shopUser = client.GetUser(seller.Player.DiscordId);
-		if (shopUser == null)
-		{
-			throw new Exception("SHOP OWNER NULL: " + seller.Player.DiscordId);
-		}*/
 
 		//default to first is none was selected
-		if (currentItem == null)
-		{
-			currentItem = sellInventory.Items[0];
-		}
-
+		if (currentItem == null) currentItem = sellInventory.Items[0];
 		if (currentAmountSelected > currentItem.DbMeta.Amount) currentAmountSelected = currentItem.DbMeta.Amount;
 
 		int totalCost = currentItem.DbMeta.ActualCost * Math.Max(0, currentAmountSelected);
 
-		var embed = new EmbedBuilder()
-			.WithAuthor(client.GetUser(ulong.Parse(seller.Player.DiscordId)))
-			.WithTitle("Sell: " + currentItem.Item.DbReference.Name)
-			.WithDescription(currentItem.Item.DbReference.LongDescription ?? "No description.")
-			.WithThumbnailUrl(currentItem.Item.DbReference.ImgUrl ?? "")
-			.WithFooter($"{buyer.Name}'s Total Available Gold: {buyer.Gold} gp")
-			.WithColor(Color.Blue);
 
+		var shopOwner = client.GetUser(ulong.Parse(seller.Player.DiscordId));
+		string authorName = ((shopOwner as IGuildUser)?.Nickname ?? shopOwner.Username) + "'s Inventory";
+		var embed = ItemManager.Instance.CreateSmallDisplay(shopOwner, authorName, currentItem, currentAmountSelected);
 
-		embed.AddField("Price-Per-Unit:", currentItem.DbMeta.ActualCost + "gp", true);
 		embed.AddField("Total Gain:", totalCost + "gp", true);
-
+		embed.WithColor(Color.Blue);
+		embed.WithFooter($"{buyer.Name}'s Total Available Gold: {buyer.Gold} gp");
 
 		var builder = new ComponentBuilder();
 
@@ -387,11 +320,11 @@ public class ShopManager
 		{
 			string itemName = sellInventory.Items[i].Item.DbReference.Name;
 			int itemId = sellInventory.Items[i].Item.DbReference.Id;
-			//opensell_{buyerDBId}_{itemId}_0_{filterParam} // 0 as starting amount
+			//opensell_{non-componentIderactorDisocrdID}_{itemId}_0_{filterParam} // 0 as starting amount
 			itemSelector.Add(new SelectMenuOptionBuilder(
 				label: itemName,
 				description: string.Join(", ", sellInventory.Items[i].Item.Tags),
-				value: $"opensell_{seller.Player.DiscordId}_{itemId}_0_{filterParam}"
+				value: $"opensell_{buyer.DiscordId}_{itemId}_0_{filterParam}"
 			));
 		}
 		builder.WithSelectMenu(
@@ -406,10 +339,10 @@ public class ShopManager
 		int maxQuant = Math.Min(25, currentItem.DbMeta.Amount);// 25 is max
 		for (int i = 0; i < maxQuant; i++)
 		{
-			//opensell_{buyerDBId}_{itemId}_{quantity}_{filterParam}
+			//opensell_{non-componentIderactorDisocrdID}_{itemId}_{quantity}_{filterParam}
 			quantityOptions.Add(new SelectMenuOptionBuilder(
 				label: (i + 1).ToString(),
-				value: $"opensell_{seller.Player.DiscordId}_{currentItem.Item.DbReference.Id}_{i + 1}_{filterParam}"
+				value: $"opensell_{buyer.DiscordId}_{currentItem.Item.DbReference.Id}_{i + 1}_{filterParam}"
 			));
 		}
 

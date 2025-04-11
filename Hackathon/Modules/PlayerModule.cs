@@ -36,7 +36,7 @@ public class PlayerModule : ModuleBase
 	}
 
 	[SlashCommand("inventory", "Display your inventory")]
-	public async Task GetInventory(string? filter = null, bool detailed = false, IUser? target = null)
+	public async Task GetInventory(string? filter = null, IUser? target = null)
 	{
 		await DeferAsync(ephemeral: true);// can be either
 
@@ -47,7 +47,7 @@ public class PlayerModule : ModuleBase
 			pageIndex: 0,
 			_profileService,
 			_playerService,
-			detailed,
+			true,
 			filter
 		);
 

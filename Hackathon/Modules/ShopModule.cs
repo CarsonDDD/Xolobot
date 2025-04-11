@@ -119,14 +119,14 @@ public class ShopModule : ModuleBase
 	}
 
 	[SlashCommand("open", "Open the shop interface")]
-	public async Task OpenShop(bool detailed = false, string? filter = null)
+	public async Task OpenShop(string? filter = null)
 	{
 		await DeferAsync();
 
 		var shopkeeper = _client.GetUser(ShopManager.SHOP_DISCORD_ID);
 
 		// Build the shop page using page index 0, compact view (detailed=false), no filter.
-		var result = ShopManager.Instance.BuildShopPage(shopkeeper, 0, _profileService, _playerService, detailed, filter);
+		var result = ShopManager.Instance.BuildShopPage(shopkeeper, 0, _profileService, _playerService, true, filter);
 		if (result == null)
 		{
 			await FollowupAsync("The shop is currently empty.");

@@ -75,6 +75,7 @@ public class Startup
 			services.AddTransient<PlayerProfileService>();
 			services.AddTransient<ItemService>();
 			services.AddTransient<InventoryService>();
+			services.AddTransient<ShopService>();
 
 		});
 

@@ -306,7 +306,9 @@ public class ShopManager
 
 		bool canTransact = player.Gold > totalCost;
 
-		builder.WithButton(buyButtonText, customId: $"buymenu_buy_{shopKeeper.Player.Id}_{currentAmountSelected}", emote: buyEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
+		// transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}
+
+		builder.WithButton(buyButtonText, customId: $"transaction_buy_{shopKeeper.Player.DiscordId}_{player.DiscordId}_{item.Item.DbReference.Id}_{currentAmountSelected}", emote: buyEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
 
 		if (canTransact && currentAmountSelected > 0)
 		{
@@ -442,8 +444,8 @@ public class ShopManager
 		// sell
 		// poor
 		bool canTransact = buyer.Gold > totalCost;
-
-		builder.WithButton(sellButtonText, customId: $"sellmenu_sell_{seller.Player.Id}_{currentAmountSelected}", emote: sellEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
+		// transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}
+		builder.WithButton(sellButtonText, customId: $"transaction_sell_{seller.Player.DiscordId}_{ShopManager.SHOP_DISCORD_ID}_{currentItem.Item.DbReference.Id}_{currentAmountSelected}", emote: sellEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
 
 		if (currentAmountSelected > 0 && canTransact)
 		{
@@ -452,6 +454,14 @@ public class ShopManager
 		//builder.WithButton("✘ Cancel", customId: $"sellmenu_cancel", emote: new Emoji("🙅‍♂️"), style: ButtonStyle.Danger);
 
 		return (embed.Build(), builder.Build());
+	}
+
+	public static async Task<ShopService.ShopResult> ExecuteTransaction(ShopService shopService, string type, string giverDiscordId, string takerDiscordId, int itemId, int quantity)
+	{
+
+		//await Task.CompletedTask;
+		//return ShopService.ShopResult.Success;
+		return await shopService.ExecuteTransaction(type, giverDiscordId, takerDiscordId, itemId, quantity);
 	}
 
 }

@@ -31,13 +31,13 @@ public class InteractionHandler
 	private readonly DatabaseService _database;
 	private readonly PlayerService _playerService;
 	private readonly PlayerProfileService _profileService;
-
 	private readonly InventoryService _inventoryService;
+	private readonly ShopService _shopService;
 
 	public delegate void BotResponseEvent(object sender, BotResponseArgs e);
 	public event BotResponseEvent? OnPostBotMention;
 
-	public InteractionHandler(DiscordSocketClient client, InteractionService interactionService, IServiceProvider services, ILogger<InteractionHandler> logger, OpenAIService openAiService, DatabaseService dbService, PlayerService playerService, PlayerProfileService profileService, InventoryService inventoryService)
+	public InteractionHandler(DiscordSocketClient client, InteractionService interactionService, IServiceProvider services, ILogger<InteractionHandler> logger, OpenAIService openAiService, DatabaseService dbService, PlayerService playerService, PlayerProfileService profileService, InventoryService inventoryService, ShopService shopService)
 	{
 		_interactionService = interactionService;
 		_client = client;
@@ -48,6 +48,7 @@ public class InteractionHandler
 		_playerService = playerService;
 		_profileService = profileService;
 		_inventoryService = inventoryService;
+		_shopService = shopService;
 
 		// events
 		_client.ButtonExecuted += ButtonHandler;
@@ -225,7 +226,36 @@ public class InteractionHandler
 		{
 			await HandleShopSellMenuOpenButton(component);
 		}
+		else if (component.Data.CustomId.StartsWith("transaction_"))
+		{
+			await HandleTransactionButton(component);
+		}
 	}
+
+	private async Task HandleTransactionButton(SocketMessageComponent component)
+	{
+		// transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}
+		var parts = component.Data.CustomId.Split('_');
+
+		string type = parts[1];
+		string giverDiscordID = parts[2];
+		string takerDiscordID = parts[3];
+		int itemID = Int32.Parse(parts[4]);
+		int quantity = Int32.Parse(parts[5]);
+
+		string message = $"Type: {type}\n" +
+				 $"Giver Discord ID: {_client.GetUser(ulong.Parse(giverDiscordID))}\n" +
+				 $"Taker Discord ID: {_client.GetUser(ulong.Parse(takerDiscordID))}\n" +
+				 $"Item ID: {itemID}\n" +
+				 $"Quantity: {quantity}";
+
+
+		ShopService.ShopResult result = await ShopManager.ExecuteTransaction(_shopService, type, giverDiscordID, takerDiscordID, itemID, quantity);
+
+		await component.RespondAsync(message + "\n" + result, ephemeral: true);
+
+	}
+
 
 	private async Task HandleShopSellMenuOpenButton(SocketMessageComponent component)
 	{

@@ -243,6 +243,12 @@ public class InteractionHandler
 		int itemID = Int32.Parse(parts[4]);
 		int quantity = Int32.Parse(parts[5]);
 
+		// Break down filter. 
+		string filterString = parts.Length >= 6 ? parts[6] : "";
+		string[] filterArray = string.IsNullOrWhiteSpace(filterString)
+			? new string[0]
+			: filterString.Split('-');
+
 		string message = $"Type: {type}\n" +
 				 $"Giver Discord ID: {_client.GetUser(ulong.Parse(giverDiscordID))}\n" +
 				 $"Taker Discord ID: {_client.GetUser(ulong.Parse(takerDiscordID))}\n" +
@@ -252,7 +258,35 @@ public class InteractionHandler
 
 		ShopService.ShopResult result = await ShopManager.ExecuteTransaction(_shopService, type, giverDiscordID, takerDiscordID, itemID, quantity);
 
-		await component.RespondAsync(message + "\n" + result, ephemeral: true);
+		if (result == ShopService.ShopResult.Success)
+		{
+			// Update component
+			var buyer = _playerService.GetByDiscordId(takerDiscordID);
+			var seller = _profileService.GetProfileByDiscordId(giverDiscordID);
+			var selectedItem = _inventoryService.GetInventoryItemStack(itemID, ulong.Parse(giverDiscordID));
+			(Embed, MessageComponent)? updatedComp = null;
+
+			if (type == "buy")
+			{
+				updatedComp = ShopManager.Instance.BuildBuyInteract(_client, buyer, selectedItem, seller, filterArray, 0);
+
+
+			}
+			else if (type == "sell")
+			{
+				updatedComp = ShopManager.Instance.BuildSellInteract(_client, buyer, selectedItem, seller, filterArray, 0);
+			}
+
+			if (updatedComp == null)
+			{
+				await component.RespondAsync("No matching items.---SOMETHING WENT WRONG AAH", ephemeral: true);
+				return;
+			}
+			var (embed, components) = updatedComp.Value;
+			await component.RespondAsync(embed: embed, components: components, ephemeral: true);
+		}
+
+		//await component.RespondAsync(message + "\n" + result, ephemeral: true);
 
 	}
 

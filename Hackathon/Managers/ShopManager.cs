@@ -201,7 +201,7 @@ public class ShopManager
 		{
 			var emptyEmbed = new EmbedBuilder()
 				.WithTitle("Nothing Available!")
-				.WithDescription("There are no items available with the specified search criteria.\nPlease try a different search or check back later.")
+				.WithDescription("There are no items available with the specified search criteria.\nPlease try a different search or check back later.\nfilter: " + string.Join(", ", filter))
 				.WithColor(Color.DarkRed)
 				.Build();
 
@@ -215,6 +215,8 @@ public class ShopManager
 		{
 			item = shopItems.Items[0];
 		}
+
+		if (currentAmountSelected > item.DbMeta.Amount) currentAmountSelected = item.DbMeta.Amount;
 
 		int totalCost = item.DbMeta.ActualCost * Math.Max(0, currentAmountSelected);
 
@@ -306,9 +308,9 @@ public class ShopManager
 
 		bool canTransact = player.Gold > totalCost;
 
-		// transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}
+		// transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}_{component filters}
 
-		builder.WithButton(buyButtonText, customId: $"transaction_buy_{shopKeeper.Player.DiscordId}_{player.DiscordId}_{item.Item.DbReference.Id}_{currentAmountSelected}", emote: buyEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
+		builder.WithButton(buyButtonText, customId: $"transaction_buy_{shopKeeper.Player.DiscordId}_{player.DiscordId}_{item.Item.DbReference.Id}_{currentAmountSelected}_{filterParam}", emote: buyEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
 
 		if (canTransact && currentAmountSelected > 0)
 		{
@@ -355,6 +357,8 @@ public class ShopManager
 		{
 			currentItem = sellInventory.Items[0];
 		}
+
+		if (currentAmountSelected > currentItem.DbMeta.Amount) currentAmountSelected = currentItem.DbMeta.Amount;
 
 		int totalCost = currentItem.DbMeta.ActualCost * Math.Max(0, currentAmountSelected);
 
@@ -444,8 +448,8 @@ public class ShopManager
 		// sell
 		// poor
 		bool canTransact = buyer.Gold > totalCost;
-		// transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}
-		builder.WithButton(sellButtonText, customId: $"transaction_sell_{seller.Player.DiscordId}_{ShopManager.SHOP_DISCORD_ID}_{currentItem.Item.DbReference.Id}_{currentAmountSelected}", emote: sellEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
+		// transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}_{component filters}
+		builder.WithButton(sellButtonText, customId: $"transaction_sell_{seller.Player.DiscordId}_{ShopManager.SHOP_DISCORD_ID}_{currentItem.Item.DbReference.Id}_{currentAmountSelected}_{filterParam}", emote: sellEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
 
 		if (currentAmountSelected > 0 && canTransact)
 		{

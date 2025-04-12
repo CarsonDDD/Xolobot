@@ -55,6 +55,7 @@ public class ItemManager
 
 
         display.AddField("Price-Per-Unit:", itemStack.DbMeta.ActualCost + "gp", true);
+        display.AddField("{total}:", itemStack.DbMeta.ActualCost * quantity + "gp", true);
 
         return display;
     }

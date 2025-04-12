@@ -135,7 +135,7 @@ public class InteractionHandler
 			return;
 		}
 
-		var selectedItem = _inventoryService.GetInventoryItemStack(Int32.Parse(itemId), ulong.Parse(buyerDiscordId));
+		var selectedItem = _inventoryService.GetInventoryItemStack(Int32.Parse(itemId), ulong.Parse(sellerDiscordId));
 
 		var result = ShopManager.Instance.BuildSellInteract(_client, buyer, selectedItem, playerSelling, filterArray, startingAmount);
 
@@ -323,7 +323,8 @@ public class InteractionHandler
 			return;
 		}
 
-		var selectedItem = _inventoryService.GetInventoryItemStack(Int32.Parse(itemId), ulong.Parse(buyerDiscordId));
+		var selectedItem = _inventoryService.GetInventoryItemStack(Int32.Parse(itemId), ulong.Parse(playerSelling.Player.DiscordId.ToString()));
+		if (selectedItem == null) System.Console.WriteLine("Selected item in Interaction Handler is null");
 
 		var result = ShopManager.Instance.BuildSellInteract(_client, buyer, selectedItem, playerSelling, filterArray, startingAmount);
 

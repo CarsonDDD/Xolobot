@@ -136,7 +136,7 @@ public class ShopManager
 		// Buy
 		if (detailed)
 		{
-			// openbuy_{non-componentIderactorDisocrdID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
+			// openbuy_{non-componentInteractorDisocrdID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
 			int startingAmount = 0;
 			builder.WithButton("Select", customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}_{startingAmount}_{filterParam}", style: ButtonStyle.Success, emote: new Emoji("🏷️"));
 		}
@@ -167,7 +167,6 @@ public class ShopManager
 			);
 		}
 
-
 		//default to first is none was selected
 		if (item == null) item = shopItems.Items[0];
 		if (currentAmountSelected > item.DbMeta.Amount) currentAmountSelected = item.DbMeta.Amount;
@@ -178,56 +177,23 @@ public class ShopManager
 		var shopOwner = client.GetUser(ulong.Parse(shopKeeper.Player.DiscordId));
 		string authorName = ((shopOwner as IGuildUser)?.Nickname ?? shopOwner.Username) + "'s Shop";
 		var embed = ItemManager.Instance.CreateSmallDisplay(shopOwner, authorName, item, currentAmountSelected);
-		embed.AddField("Total Cost:", totalCost + "gp", true);
 		embed.WithColor(Color.Purple);
 		embed.WithFooter($"Your Gold Available: {player.Gold} gp");
+		embed.Fields[1].Name = embed.Fields[1].Name.Replace("{total}", "Total Cost");
 
-		var builder = new ComponentBuilder();
+
+		//var builder = new ComponentBuilder();
 
 		// Prepare a safe string representation of the filter by joining tokens with hyphen.
 		string filterParam = filter.Length > 0 ? string.Join("-", filter) : "";
 
-		// item selector
-		var itemSelector = new List<SelectMenuOptionBuilder>();
-		int maxItem = Math.Min(25, shopItems.Items.Count);// 25 is max
-		for (int i = 0; i < maxItem; i++)
-		{
-			string itemName = shopItems.Items[i].Item.DbReference.Name;
-			int itemId = shopItems.Items[i].Item.DbReference.Id;
-			//openbuy_{non-componentIderactorDisocrdID}_{itemId}_0_{filterParam} // 0 as starting amount
-			itemSelector.Add(new SelectMenuOptionBuilder(
-				label: itemName,
-				description: string.Join(", ", shopItems.Items[i].Item.Tags),
-				value: $"openbuy_{shopKeeper.Player.DiscordId}_{itemId}_0_{filterParam}"
-			));
-		}
-		builder.WithSelectMenu(
-				customId: "buymenu_itemselector",
-				options: itemSelector,
-				placeholder: item.Item.DbReference.Name
+		ComponentBuilder builder = CreateItemSelector(shopItems, item,
+		"buymenu_itemselector", $"openbuy_{shopKeeper.Player.DiscordId}_{{i}}_1_{filterParam}",
+		"buymenu_quantselector", $"openbuy_{shopKeeper.Player.DiscordId}_{item.Item.DbReference.Id}_{{i}}_{filterParam}",
+		currentAmountSelected
 		);
 
-
-		// generate amount list.
-		var quantityOptions = new List<SelectMenuOptionBuilder>();
-		int maxQuant = Math.Min(25, item.DbMeta.Amount);// 25 is max
-		for (int i = 0; i < maxQuant; i++)
-		{
-			//openbuy_{non-componentIderactorDisocrdID}_{itemId}_{quantity}_{filterParam}
-			quantityOptions.Add(new SelectMenuOptionBuilder(
-				label: (i + 1).ToString(),
-				value: $"openbuy_{shopKeeper.Player.DiscordId}_{item.Item.DbReference.Id}_{i + 1}_{filterParam}"
-			));
-		}
-
-		string quantityPlaceholder = currentAmountSelected > 0 ? currentAmountSelected.ToString() : "Select Quantity";
-
-		builder.WithSelectMenu(
-				customId: "buymenu_quantselector",
-				options: quantityOptions,
-				placeholder: quantityPlaceholder
-		);
-
+		// Interact Buttons
 		string buyButtonText = null;
 		Emoji buyEmoji = null;
 		if (currentAmountSelected <= 0)
@@ -251,21 +217,15 @@ public class ShopManager
 			}
 		}
 
-		// emojis: select quant
-		// buy
-		// poor
 
 		bool canTransact = player.Gold > totalCost;
-
 		// transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}_{component filters}
-
 		builder.WithButton(buyButtonText, customId: $"transaction_buy_{shopKeeper.Player.DiscordId}_{player.DiscordId}_{item.Item.DbReference.Id}_{currentAmountSelected}_{filterParam}", emote: buyEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
 
 		if (canTransact && currentAmountSelected > 0)
 		{
 			builder.WithButton("Haggle", customId: $"buymenu_haggle", emote: new Emoji("🤌"), style: ButtonStyle.Primary, disabled: !canTransact || (currentAmountSelected <= 0));
 		}
-		//builder.WithButton("✘ Cancel", customId: $"buymenu_cancel", emote: new Emoji("🙅‍♂️"), style: ButtonStyle.Danger);
 
 		return (embed.Build(), builder.Build());
 	}
@@ -273,7 +233,7 @@ public class ShopManager
 	public (Embed embed, MessageComponent components)? BuildSellInteract(
 		DiscordSocketClient client,
 		Player buyer, // Shop keeper
-		ItemStack? currentItem,
+		ItemStack currentItem,
 		PlayerProfile seller, //player calling this function
 		string[] filter,
 		int currentAmountSelected = 0
@@ -299,59 +259,22 @@ public class ShopManager
 
 		int totalCost = currentItem.DbMeta.ActualCost * Math.Max(0, currentAmountSelected);
 
-
 		var shopOwner = client.GetUser(ulong.Parse(seller.Player.DiscordId));
 		string authorName = ((shopOwner as IGuildUser)?.Nickname ?? shopOwner.Username) + "'s Inventory";
 		var embed = ItemManager.Instance.CreateSmallDisplay(shopOwner, authorName, currentItem, currentAmountSelected);
-
-		embed.AddField("Total Gain:", totalCost + "gp", true);
+		embed.Fields[1].Name = embed.Fields[1].Name.Replace("{total}", "Total Gain");
 		embed.WithColor(Color.Blue);
 		embed.WithFooter($"{buyer.Name}'s Total Available Gold: {buyer.Gold} gp");
 
-		var builder = new ComponentBuilder();
+		//var builder = new ComponentBuilder();
 
 		// Prepare a safe string representation of the filter by joining tokens with hyphen.
 		string filterParam = filter.Length > 0 ? string.Join("-", filter) : "";
 
-		// item selector
-		var itemSelector = new List<SelectMenuOptionBuilder>();
-		int maxItem = Math.Min(25, sellInventory.Items.Count);// 25 is max
-		for (int i = 0; i < maxItem; i++)
-		{
-			string itemName = sellInventory.Items[i].Item.DbReference.Name;
-			int itemId = sellInventory.Items[i].Item.DbReference.Id;
-			//opensell_{non-componentIderactorDisocrdID}_{itemId}_0_{filterParam} // 0 as starting amount
-			itemSelector.Add(new SelectMenuOptionBuilder(
-				label: itemName,
-				description: string.Join(", ", sellInventory.Items[i].Item.Tags),
-				value: $"opensell_{buyer.DiscordId}_{itemId}_0_{filterParam}"
-			));
-		}
-		builder.WithSelectMenu(
-				customId: "sellmenu_itemselector",
-				options: itemSelector,
-				placeholder: currentItem.Item.DbReference.Name
-		);
-
-
-		// generate amount list.
-		var quantityOptions = new List<SelectMenuOptionBuilder>();
-		int maxQuant = Math.Min(25, currentItem.DbMeta.Amount);// 25 is max
-		for (int i = 0; i < maxQuant; i++)
-		{
-			//opensell_{non-componentIderactorDisocrdID}_{itemId}_{quantity}_{filterParam}
-			quantityOptions.Add(new SelectMenuOptionBuilder(
-				label: (i + 1).ToString(),
-				value: $"opensell_{buyer.DiscordId}_{currentItem.Item.DbReference.Id}_{i + 1}_{filterParam}"
-			));
-		}
-
-		string quantityPlaceholder = currentAmountSelected > 0 ? currentAmountSelected.ToString() : "Select Quantity";
-
-		builder.WithSelectMenu(
-				customId: "sellmenu_quantselector",
-				options: quantityOptions,
-				placeholder: quantityPlaceholder
+		ComponentBuilder builder = CreateItemSelector(sellInventory, currentItem,
+		"sellmenu_itemselector", $"opensell_{buyer.DiscordId}_{{i}}_1_{filterParam}",
+		"sellmenu_quantselector", $"opensell_{buyer.DiscordId}_{currentItem.Item.DbReference.Id}_{{i}}_{filterParam}",
+		currentAmountSelected
 		);
 
 		string sellButtonText = null;
@@ -377,9 +300,7 @@ public class ShopManager
 			}
 		}
 
-		// emojis: select quant
-		// sell
-		// poor
+
 		bool canTransact = buyer.Gold > totalCost;
 		// transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}_{component filters}
 		builder.WithButton(sellButtonText, customId: $"transaction_sell_{seller.Player.DiscordId}_{ShopManager.SHOP_DISCORD_ID}_{currentItem.Item.DbReference.Id}_{currentAmountSelected}_{filterParam}", emote: sellEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
@@ -388,17 +309,58 @@ public class ShopManager
 		{
 			builder.WithButton("Haggle", customId: $"sellmenu_haggle", emote: new Emoji("🤌"), style: ButtonStyle.Primary, disabled: !canTransact || (currentAmountSelected <= 0));
 		}
-		//builder.WithButton("✘ Cancel", customId: $"sellmenu_cancel", emote: new Emoji("🙅‍♂️"), style: ButtonStyle.Danger);
 
 		return (embed.Build(), builder.Build());
 	}
 
-	public static async Task<ShopService.ShopResult> ExecuteTransaction(ShopService shopService, string type, string giverDiscordId, string takerDiscordId, int itemId, int quantity)
+	public ComponentBuilder CreateItemSelector(InventoryWithItems inventory, ItemStack currentItem,
+		string itemSelectorMenuCustomId, string itemSelectorCustomId,
+		string quanitySelectorMenuCustomId, string quanitySelectorCustomId, int currentQuantity)
 	{
+		ComponentBuilder menus = new ComponentBuilder();
 
-		//await Task.CompletedTask;
-		//return ShopService.ShopResult.Success;
-		return await shopService.ExecuteTransaction(type, giverDiscordId, takerDiscordId, itemId, quantity);
+		// item selector
+		var itemSelector = new List<SelectMenuOptionBuilder>();
+		int maxItem = Math.Min(25, inventory.Items.Count);// 25 is max
+		for (int i = 0; i < maxItem; i++)
+		{
+			string itemName = inventory.Items[i].Item.DbReference.Name;
+			int itemId = inventory.Items[i].Item.DbReference.Id;
+			//opensell_{non-componentInteractorDisocrdID}_{itemId}_0_{filterParam} // 0 as starting amount
+			itemSelector.Add(new SelectMenuOptionBuilder(
+				label: itemName,
+				description: string.Join(", ", inventory.Items[i].Item.Tags),
+				value: itemSelectorCustomId.Replace("{i}", itemId.ToString())
+			));
+		}
+		menus.WithSelectMenu(
+				customId: itemSelectorMenuCustomId,
+				options: itemSelector,
+				placeholder: currentItem.Item.DbReference.Name
+		);
+
+		// generate amount list.
+		var quantityOptions = new List<SelectMenuOptionBuilder>();
+		int maxQuant = Math.Min(25, currentItem.DbMeta.Amount);// 25 is max
+		for (int i = 0; i < maxQuant; i++)
+		{
+			//opensell_{non-componentInteractorDisocrdID}_{itemId}_{quantity}_{filterParam}
+			quantityOptions.Add(new SelectMenuOptionBuilder(
+				label: (i + 1).ToString(),
+				value: quanitySelectorCustomId.Replace("{i}", (i + 1).ToString())
+			));
+		}
+		menus.WithSelectMenu(
+				customId: quanitySelectorMenuCustomId,
+				options: quantityOptions,
+				placeholder: currentQuantity > 0 ? currentQuantity.ToString() : "Select Quantity"
+		);
+
+		return menus;
 	}
 
+	public static async Task<ShopService.ShopResult> ExecuteTransaction(ShopService shopService, string type, string giverDiscordId, string takerDiscordId, int itemId, int quantity)
+	{
+		return await shopService.ExecuteTransaction(type, giverDiscordId, takerDiscordId, itemId, quantity);
+	}
 }

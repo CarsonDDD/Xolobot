@@ -20,7 +20,6 @@ public class ShopManager
 		INSUFFICIENT_QUANITY,
 		INSUFFICIENT_FUNDS,
 		UNAVAILABLE,
-
 	}
 
 	private static ShopManager _instance;
@@ -33,43 +32,6 @@ public class ShopManager
 	private const int ITEMS_PER_SHOP_PAGE = 3;
 	private const string SHOP_NAME = "**Magic store**";
 	private const string BUY_HELP_TEXT = "To view an item to purchase, use /shop view <item>";
-
-	public PlayerProfile? GetShopkeeper(PlayerProfileService playerProfileService)
-	{
-		return playerProfileService.GetProfile(SHOP_DB_ID);
-	}
-
-	public List<ItemStack> GetShopInventory(PlayerProfileService playerProfileService, string? filter = null)
-	{
-		var inv = GetShopkeeper(playerProfileService).Inventory;
-		// Filter goes here
-
-		return inv.Items;
-	}
-
-	public async Task<SHOP_RESULT> TryBuyItem(
-		string buyerDiscordId,
-		string itemName,
-		int quantity,
-		PlayerService playerService)
-	{
-		if (quantity <= 0) return SHOP_RESULT.INSUFFICIENT_QUANITY;
-
-
-		return SHOP_RESULT.SUCCESS;
-	}
-
-	public async Task<SHOP_RESULT> TrySellItem(
-		string sellerDiscordId,
-		string itemName,
-		int quantity,
-		PlayerService playerService)
-	{
-		if (quantity <= 0) return SHOP_RESULT.INSUFFICIENT_QUANITY;
-
-
-		return SHOP_RESULT.SUCCESS;
-	}
 
 	// Near identical to the inventory page. However, in the future we will change it....maybe
 	public (Embed embed, MessageComponent components)? BuildShopPage(
@@ -111,34 +73,28 @@ public class ShopManager
 		var pagedItems = items.Skip(pageIndex * itemsPerPage).Take(itemsPerPage);
 		ItemStack? displayedItem = pagedItems.First();
 
-		string footer = filter == null ?
-		$"Page {pageIndex + 1} of {totalPages}"
-		:
+		string footer = string.IsNullOrWhiteSpace(filter) ?
+		$"Page {pageIndex + 1} of {totalPages}" :
 		$"Page {pageIndex + 1} of {totalPages} — for '{filter}'";
 
 		string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Shop";
 		var embed = ItemManager.Instance.CreateDetailedDisplay(user, displayedItem, authorName, footer);
 
-		// Create a safe string representation of the filter.
-		string filterParam = !string.IsNullOrWhiteSpace(filter) ? filter : "";
-
-		// Incorporate the detailed flag into the custom ID.
-		string baseId = !string.IsNullOrWhiteSpace(filter)
-			? $"shop_filtered_{filter}_{(detailed ? "detailed" : "compact")}_{user.Id}"
-			: $"shop_page_{(detailed ? "detailed" : "compact")}_{user.Id}";
+		// shop_{isDetailed}_{DiscordID}_{destinationPage}_{filter}
+		string baseId = $"shop_{detailed}_{user.Id}";
 
 		var builder = new ComponentBuilder();
 
 		// Nav
-		builder.WithButton("🡄", customId: $"{baseId}_{pageIndex - 1}"/*, emote: new Emoji("\u2B05")*/, style: ButtonStyle.Secondary, disabled: pageIndex == 0);
-		builder.WithButton("🡆", customId: $"{baseId}_{pageIndex + 1}"/*, emote: new Emoji("\u27A1")*/, style: ButtonStyle.Secondary, disabled: pageIndex == totalPages - 1);
+		builder.WithButton("🡄", customId: $"{baseId}_{pageIndex - 1}_{filter}"/*, emote: new Emoji("\u2B05")*/, style: ButtonStyle.Secondary, disabled: pageIndex == 0);
+		builder.WithButton("🡆", customId: $"{baseId}_{pageIndex + 1}_{filter}"/*, emote: new Emoji("\u27A1")*/, style: ButtonStyle.Secondary, disabled: pageIndex == totalPages - 1);
 
 		// Buy
 		if (detailed)
 		{
 			// openbuy_{non-componentInteractorDisocrdID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
 			int startingAmount = 0;
-			builder.WithButton("Select", customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}_{startingAmount}_{filterParam}", style: ButtonStyle.Success, emote: new Emoji("🏷️"));
+			builder.WithButton("Select", customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}_{startingAmount}_{filter}", style: ButtonStyle.Success, emote: new Emoji("🏷️"));
 		}
 
 		return (embed.Build(), builder.Build());
@@ -181,8 +137,6 @@ public class ShopManager
 		embed.WithFooter($"Your Gold Available: {player.Gold} gp");
 		embed.Fields[1].Name = embed.Fields[1].Name.Replace("{total}", "Total Cost");
 
-
-		//var builder = new ComponentBuilder();
 
 		// Prepare a safe string representation of the filter by joining tokens with hyphen.
 		string filterParam = filter.Length > 0 ? string.Join("-", filter) : "";

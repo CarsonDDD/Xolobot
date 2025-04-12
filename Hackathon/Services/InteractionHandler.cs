@@ -209,13 +209,11 @@ public class InteractionHandler
 		//Console.Out.WriteLine(component.User.GlobalName + ": " + component.Data.CustomId);
 		_logger.LogInformation($"{component.User.GlobalName}: {component.Data.CustomId}");
 		// Inv nav
-		if (component.Data.CustomId.StartsWith("inventory_page_") ||
-		component.Data.CustomId.StartsWith("inventory_filtered_"))
+		if (component.Data.CustomId.StartsWith("inventory"))
 		{
 			await HandleInventoryPageNavigation(component);
 		}
-		else if (component.Data.CustomId.StartsWith("shop_page_") ||
-		 component.Data.CustomId.StartsWith("shop_filtered_"))
+		else if (component.Data.CustomId.StartsWith("shop"))
 		{
 			await HandleShopPageNavigation(component);
 		}
@@ -395,51 +393,27 @@ public class InteractionHandler
 
 	private async Task HandleInventoryPageNavigation(SocketMessageComponent component)
 	{
-		var parts = component.Data.CustomId.Split('_');
-		// For filtered inventory, expected format:
-		//   inventory_filtered_{filter}_{detailed/compact}_{userId}_{pageIndex}
-		// For non-filtered:
-		//   inventory_page_{detailed/compact}_{userId}_{pageIndex}
-		if (parts.Length < 5) return;
+		// inventory_{isDetailed}_{DiscordID}_{destinationPage}_{filter}
+		var parts = component.Data.CustomId.Split(new[] { '_' }, StringSplitOptions.RemoveEmptyEntries);
 
-		bool isFiltered = parts[1].Equals("filtered", StringComparison.OrdinalIgnoreCase);
-		string? filter = null;
-		bool detailed = false;
-		ulong userId;
-		int pageIndex;
-
-		if (isFiltered)
-		{
-			if (parts.Length < 6) return;
-			filter = parts[2];
-			detailed = parts[3].Equals("detailed", StringComparison.OrdinalIgnoreCase);
-			if (!ulong.TryParse(parts[4], out userId)) return;
-			if (!int.TryParse(parts[5], out pageIndex)) return;
-		}
-		else
-		{
-			detailed = parts[2].Equals("detailed", StringComparison.OrdinalIgnoreCase);
-			if (!ulong.TryParse(parts[3], out userId)) return;
-			if (!int.TryParse(parts[4], out pageIndex)) return;
-		}
-
-		//var user = _client.GetUser(userId);
-		var user = await GetGuildUserAsync(component, userId);
-
-		if (user == null) return;
+		bool isDetailed = bool.Parse(parts[1]);
+		ulong discordId = ulong.Parse(parts[2]);
+		int destinationPageIndex = int.Parse(parts[3]);
+		string filter = parts.Length >= 5 ? parts[4] : "";
+		var user = await GetGuildUserAsync(component, discordId);
 
 		var result = InventoryManager.Instance.BuildInventoryPage(
 			user,
-			pageIndex,
+			destinationPageIndex,
 			_profileService,
 			_playerService,
-			detailed,
+			isDetailed,
 			filter
 		);
 
 		if (result == null)
 		{
-			await component.RespondAsync("No matching items.", ephemeral: true);
+			await component.RespondAsync("No matching items. This should never be called", ephemeral: true);
 			return;
 		}
 
@@ -477,50 +451,27 @@ public class InteractionHandler
 
 	private async Task HandleShopPageNavigation(SocketMessageComponent component)
 	{
-		var parts = component.Data.CustomId.Split('_');
-		// For filtered shop view, expected format:
-		//   shop_filtered_{filter}_{detailed/compact}_{userId}_{pageIndex}
-		// For non-filtered shop view:
-		//   shop_page_{detailed/compact}_{userId}_{pageIndex}
-		if (parts.Length < 5) return;
+		// shop_{isDetailed}_{DiscordID}_{destinationPage}_{filter}
+		var parts = component.Data.CustomId.Split(new[] { '_' }, StringSplitOptions.RemoveEmptyEntries);
 
-		bool isFiltered = parts[1].Equals("filtered", StringComparison.OrdinalIgnoreCase);
-		string? filter = null;
-		bool detailed = false;
-		ulong userId;
-		int pageIndex;
-
-		if (isFiltered)
-		{
-			if (parts.Length < 6) return;
-			filter = parts[2];
-			detailed = parts[3].Equals("detailed", StringComparison.OrdinalIgnoreCase);
-			if (!ulong.TryParse(parts[4], out userId)) return;
-			if (!int.TryParse(parts[5], out pageIndex)) return;
-		}
-		else
-		{
-			detailed = parts[2].Equals("detailed", StringComparison.OrdinalIgnoreCase);
-			if (!ulong.TryParse(parts[3], out userId)) return;
-			if (!int.TryParse(parts[4], out pageIndex)) return;
-		}
-
-		var user = await GetGuildUserAsync(component, userId);
-		//var user = _client.GetUser(userId);
-		if (user == null) return;
+		bool isDetailed = bool.Parse(parts[1]);
+		ulong discordId = ulong.Parse(parts[2]);
+		int destinationPageIndex = int.Parse(parts[3]);
+		string filter = parts.Length >= 5 ? parts[4] : "";
+		var user = await GetGuildUserAsync(component, discordId);
 
 		var result = ShopManager.Instance.BuildShopPage(
 			user,
-			pageIndex,
+			destinationPageIndex,
 			_profileService,
 			_playerService,
-			detailed,
+			isDetailed,
 			filter
 		);
 
 		if (result == null)
 		{
-			await component.RespondAsync("No matching items.", ephemeral: true);
+			await component.RespondAsync("No matching items. This should never be called", ephemeral: true);
 			return;
 		}
 
@@ -532,6 +483,7 @@ public class InteractionHandler
 			msg.Components = components;
 		});
 	}
+
 
 
 	// ai response

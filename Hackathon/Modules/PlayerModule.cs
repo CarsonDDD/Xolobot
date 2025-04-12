@@ -42,13 +42,15 @@ public class PlayerModule : ModuleBase
 
 		var player = target == null ? Context.User : target;
 
+		string filterParam = !string.IsNullOrWhiteSpace(filter) ? filter : "";
+
 		var result = InventoryManager.Instance.BuildInventoryPage(
 			player,
 			pageIndex: 0,
 			_profileService,
 			_playerService,
 			true,
-			filter
+			filterParam
 		);
 
 		if (result == null)

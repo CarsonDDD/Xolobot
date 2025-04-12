@@ -55,28 +55,21 @@ public class InventoryManager
         var pagedItems = items.Skip(pageIndex * itemsPerPage).Take(itemsPerPage);
         ItemStack? displayedItem = pagedItems.First();
 
-        string footer = filter == null ?
-        $"Page {pageIndex + 1} of {totalPages}"
-        :
+        string footer = string.IsNullOrWhiteSpace(filter) ?
+        $"Page {pageIndex + 1} of {totalPages}" :
         $"Page {pageIndex + 1} of {totalPages} — for '{filter}'";
 
         string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Inventory";
         var embed = ItemManager.Instance.CreateDetailedDisplay(user, displayedItem, authorName, footer);
         embed.WithColor(Color.Blue);// example of override
 
-
-        string filterParam = !string.IsNullOrWhiteSpace(filter) ? filter : "";
-
-        // Incorporate the detailed flag in the base id.
-        string baseId = !string.IsNullOrWhiteSpace(filter)
-            ? $"inventory_filtered_{filter}_{(detailed ? "detailed" : "compact")}_{user.Id}"
-            : $"inventory_page_{(detailed ? "detailed" : "compact")}_{user.Id}";
-
+        // inventory_{isDetailed}_{DiscordID}_{destinationPage}_{filter}
+        string baseId = $"inventory_{detailed}_{user.Id}";
         var builder = new ComponentBuilder();
 
         // Always show nav buttons
-        builder.WithButton("🡄", customId: $"{baseId}_{pageIndex - 1}"/*, emote: new Emoji("\u2B05")*/, style: ButtonStyle.Secondary, disabled: pageIndex == 0);
-        builder.WithButton("🡆", customId: $"{baseId}_{pageIndex + 1}"/*, emote: new Emoji("\u27A1")*/, style: ButtonStyle.Secondary, disabled: pageIndex == totalPages - 1);
+        builder.WithButton("🡄", customId: $"{baseId}_{pageIndex - 1}_{filter}"/*, emote: new Emoji("\u2B05")*/, style: ButtonStyle.Secondary, disabled: pageIndex == 0);
+        builder.WithButton("🡆", customId: $"{baseId}_{pageIndex + 1}_{filter}"/*, emote: new Emoji("\u27A1")*/, style: ButtonStyle.Secondary, disabled: pageIndex == totalPages - 1);
 
         if (detailed)
         {

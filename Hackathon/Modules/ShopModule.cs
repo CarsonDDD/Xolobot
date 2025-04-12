@@ -125,8 +125,10 @@ public class ShopModule : ModuleBase
 
 		var shopkeeper = _client.GetUser(ShopManager.SHOP_DISCORD_ID);
 
+		string filterParam = !string.IsNullOrWhiteSpace(filter) ? filter : "";
+
 		// Build the shop page using page index 0, compact view (detailed=false), no filter.
-		var result = ShopManager.Instance.BuildShopPage(shopkeeper, 0, _profileService, _playerService, true, filter);
+		var result = ShopManager.Instance.BuildShopPage(shopkeeper, 0, _profileService, _playerService, true, filterParam);
 		if (result == null)
 		{
 			await FollowupAsync("The shop is currently empty.");

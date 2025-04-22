@@ -3,6 +3,7 @@ using Discord.WebSocket;
 using Hackathon.DomainObjects;
 using Hackathon.Managers.Shop;
 using Hackathon.Services;
+using Hackathon.Utils;
 
 namespace Hackathon.Managers.Inventory;
 
@@ -29,20 +30,11 @@ public class InventoryManager
         if (profile?.Inventory == null || profile.Inventory.Items.Count == 0) return null;
 
 
-        var items = profile.Inventory.Items;
+        // Get list of items depending on filter.
+        List<ItemStack> items = !string.IsNullOrWhiteSpace(filter) ?
+        profile.Inventory.FilterList(Utils.Utils.Instance.DecodeTagFilter(filter)) :
+        profile.Inventory.Items;
 
-        // Apply multi-term filter if present
-        if (!string.IsNullOrWhiteSpace(filter))
-        {
-            filter = filter.Replace("_", "");// sanitize
-
-            // You can instead convert your filter string into tokens...
-            var terms = filter
-                .Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(t => t.Trim())
-                .ToArray();
-            items = profile.Inventory.FilterList(terms);
-        }
 
         if (items.Count == 0) return (ItemManager.Instance.CreateItemNotFound().Build(), new ComponentBuilder().Build());
 
@@ -73,7 +65,7 @@ public class InventoryManager
 
         if (detailed)
         {
-            string sellId = $"opensell_{ShopManager.SHOP_DISCORD_ID}_{displayedItem.Item.DbReference.Id}_1_{filterParam}";
+            string sellId = $"opensell_{ShopManager.SHOP_DISCORD_ID}_{displayedItem.Item.DbReference.Id}_1_{filter}";
             builder.WithButton($"Show {playerService.GetByDiscordId(ShopManager.SHOP_DISCORD_ID.ToString()).Name}", customId: sellId, style: ButtonStyle.Success, emote: new Emoji("🏚️"));
         }
 

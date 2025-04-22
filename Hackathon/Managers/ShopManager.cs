@@ -48,27 +48,22 @@ public class ShopManager
 		var sellerProfile = profileService.GetProfile(seller.Id);
 		if (sellerProfile?.Inventory == null || sellerProfile.Inventory.Items.Count == 0) return null;
 
-		var items = sellerProfile.Inventory.Items;
-
-		// Decode filter
-		if (!string.IsNullOrWhiteSpace(filter))
-		{
-			filter = filter.Replace("_", "");// sanitize
-
-			// You can instead convert your filter string into tokens...
-			var terms = filter
-				.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries)
-				.Select(t => t.Trim())
-				.ToArray();
-			items = sellerProfile.Inventory.FilterList(terms);
-		}
+		// Get list of items depending on filter.
+		List<ItemStack> items = !string.IsNullOrWhiteSpace(filter) ?
+		sellerProfile.Inventory.FilterList(Utils.Utils.Instance.DecodeTagFilter(filter)) :
+		sellerProfile.Inventory.Items;
 
 		if (items.Count == 0) return (ItemManager.Instance.CreateItemNotFound().Build(), new ComponentBuilder().Build());
 
 		// Regardless of filtering, detailed view is only when detailed=true.
 		int itemsPerPage = detailed ? 1 : InventoryManager.ITEMS_PER_PAGE;
+		string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Shop";
+		string baseId = $"shop_{detailed}_{user.Id}";
+		// call func here.
+
 		int totalPages = (int)Math.Ceiling(items.Count / (double)itemsPerPage);
 		pageIndex = Math.Clamp(pageIndex, 0, totalPages - 1);
+
 
 		var pagedItems = items.Skip(pageIndex * itemsPerPage).Take(itemsPerPage);
 		ItemStack? displayedItem = pagedItems.First();
@@ -77,11 +72,9 @@ public class ShopManager
 		$"Page {pageIndex + 1} of {totalPages}" :
 		$"Page {pageIndex + 1} of {totalPages} — for '{filter}'";
 
-		string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Shop";
 		var embed = ItemManager.Instance.CreateDetailedDisplay(user, displayedItem, authorName, footer);
 
 		// shop_{isDetailed}_{DiscordID}_{destinationPage}_{filter}
-		string baseId = $"shop_{detailed}_{user.Id}";
 
 		var builder = new ComponentBuilder();
 

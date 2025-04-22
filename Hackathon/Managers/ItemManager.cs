@@ -70,9 +70,10 @@ public class ItemManager
         return emptyEmbed;
     }
 
-    public (Embed embed, MessageComponent components) BuildItemDisplayPage(
+    public (EmbedBuilder embed, ComponentBuilder components) BuildItemDisplayPage(
         IUser user,
         List<ItemStack> items,
+        ItemStack displayItem,
         int pageIndex,
         int itemsPerPage,
         bool detailed,
@@ -86,14 +87,11 @@ public class ItemManager
         int totalPages = (int)Math.Ceiling(items.Count / (double)itemsPerPage);
         pageIndex = Math.Clamp(pageIndex, 0, totalPages - 1);
 
-        var pagedItems = items.Skip(pageIndex * itemsPerPage).Take(itemsPerPage);
-        ItemStack? displayedItem = pagedItems.First();
-
         string footer = string.IsNullOrWhiteSpace(filter) ?
         $"Page {pageIndex + 1} of {totalPages}" :
         $"Page {pageIndex + 1} of {totalPages} — for '{filter}'";
 
-        var embed = CreateDetailedDisplay(user, displayedItem, authorLabel, footer);
+        var embed = CreateDetailedDisplay(user, displayItem, authorLabel, footer);
 
         var builder = new ComponentBuilder();
 
@@ -107,7 +105,6 @@ public class ItemManager
             builder.WithButton(selectButton);
         }
 
-        return (embed.Build(), builder.Build());
+        return (embed, builder);
     }
-
 }

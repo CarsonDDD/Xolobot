@@ -29,47 +29,25 @@ public class InventoryManager
         var profile = profileService.GetProfile(player.Id);
         if (profile?.Inventory == null || profile.Inventory.Items.Count == 0) return null;
 
-
         // Get list of items depending on filter.
         List<ItemStack> items = !string.IsNullOrWhiteSpace(filter) ?
         profile.Inventory.FilterList(Utils.Utils.Instance.DecodeTagFilter(filter)) :
         profile.Inventory.Items;
-
-
         if (items.Count == 0) return (ItemManager.Instance.CreateItemNotFound().Build(), new ComponentBuilder().Build());
 
         // Use the detailed parameter solely to control view style:
         // If detailed is true, show one item per page regardless of filtering.
         int itemsPerPage = detailed ? 1 : ITEMS_PER_PAGE;
-        int totalPages = (int)Math.Ceiling(items.Count / (double)itemsPerPage);
-        pageIndex = Math.Clamp(pageIndex, 0, totalPages - 1);
-
         var pagedItems = items.Skip(pageIndex * itemsPerPage).Take(itemsPerPage);
         ItemStack? displayedItem = pagedItems.First();
-
-        string footer = string.IsNullOrWhiteSpace(filter) ?
-        $"Page {pageIndex + 1} of {totalPages}" :
-        $"Page {pageIndex + 1} of {totalPages} — for '{filter}'";
-
         string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Inventory";
-        var embed = ItemManager.Instance.CreateDetailedDisplay(user, displayedItem, authorName, footer);
-        embed.WithColor(Color.Blue);// example of override
-
-        // inventory_{isDetailed}_{DiscordID}_{destinationPage}_{filter}
         string baseId = $"inventory_{detailed}_{user.Id}";
-        var builder = new ComponentBuilder();
 
-        // Always show nav buttons
-        builder.WithButton("🡄", customId: $"{baseId}_{pageIndex - 1}_{filter}"/*, emote: new Emoji("\u2B05")*/, style: ButtonStyle.Secondary, disabled: pageIndex == 0);
-        builder.WithButton("🡆", customId: $"{baseId}_{pageIndex + 1}_{filter}"/*, emote: new Emoji("\u27A1")*/, style: ButtonStyle.Secondary, disabled: pageIndex == totalPages - 1);
+        ButtonBuilder selectButton = new ButtonBuilder($"Show {playerService.GetByDiscordId(ShopManager.SHOP_DISCORD_ID.ToString()).Name}", customId: $"opensell_{ShopManager.SHOP_DISCORD_ID}_{displayedItem.Item.DbReference.Id}_1_{filter}", style: ButtonStyle.Success, emote: new Emoji("🏚️"));
+        var builders = ItemManager.Instance.BuildItemDisplayPage(user, items, displayedItem, pageIndex, itemsPerPage, detailed, authorName, filter, baseId, selectButton);
+        builders.embed.WithColor(Color.Blue);
 
-        if (detailed)
-        {
-            string sellId = $"opensell_{ShopManager.SHOP_DISCORD_ID}_{displayedItem.Item.DbReference.Id}_1_{filter}";
-            builder.WithButton($"Show {playerService.GetByDiscordId(ShopManager.SHOP_DISCORD_ID.ToString()).Name}", customId: sellId, style: ButtonStyle.Success, emote: new Emoji("🏚️"));
-        }
-
-        return (embed.Build(), builder.Build());
+        return (builders.embed.Build(), builders.components.Build());
     }
 
 

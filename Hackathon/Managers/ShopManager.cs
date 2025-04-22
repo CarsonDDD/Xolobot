@@ -52,45 +52,22 @@ public class ShopManager
 		List<ItemStack> items = !string.IsNullOrWhiteSpace(filter) ?
 		sellerProfile.Inventory.FilterList(Utils.Utils.Instance.DecodeTagFilter(filter)) :
 		sellerProfile.Inventory.Items;
-
 		if (items.Count == 0) return (ItemManager.Instance.CreateItemNotFound().Build(), new ComponentBuilder().Build());
 
 		// Regardless of filtering, detailed view is only when detailed=true.
 		int itemsPerPage = detailed ? 1 : InventoryManager.ITEMS_PER_PAGE;
-		string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Shop";
-		string baseId = $"shop_{detailed}_{user.Id}";
-		// call func here.
-
-		int totalPages = (int)Math.Ceiling(items.Count / (double)itemsPerPage);
-		pageIndex = Math.Clamp(pageIndex, 0, totalPages - 1);
-
-
 		var pagedItems = items.Skip(pageIndex * itemsPerPage).Take(itemsPerPage);
 		ItemStack? displayedItem = pagedItems.First();
+		string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Shop";
+		string baseId = $"shop_{detailed}_{user.Id}";
 
-		string footer = string.IsNullOrWhiteSpace(filter) ?
-		$"Page {pageIndex + 1} of {totalPages}" :
-		$"Page {pageIndex + 1} of {totalPages} — for '{filter}'";
+		// openbuy_{non-componentInteractorDisocrdID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
+		int startingAmount = 0;
+		ButtonBuilder selectButton = new ButtonBuilder("Select", customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}_{startingAmount}_{filter}", style: ButtonStyle.Success, emote: new Emoji("🏷️"));
+		var builders = ItemManager.Instance.BuildItemDisplayPage(user, items, displayedItem, pageIndex, itemsPerPage, detailed, authorName, filter, baseId, selectButton);
+		builders.embed.WithColor(Color.Purple);
 
-		var embed = ItemManager.Instance.CreateDetailedDisplay(user, displayedItem, authorName, footer);
-
-		// shop_{isDetailed}_{DiscordID}_{destinationPage}_{filter}
-
-		var builder = new ComponentBuilder();
-
-		// Nav
-		builder.WithButton("🡄", customId: $"{baseId}_{pageIndex - 1}_{filter}"/*, emote: new Emoji("\u2B05")*/, style: ButtonStyle.Secondary, disabled: pageIndex == 0);
-		builder.WithButton("🡆", customId: $"{baseId}_{pageIndex + 1}_{filter}"/*, emote: new Emoji("\u27A1")*/, style: ButtonStyle.Secondary, disabled: pageIndex == totalPages - 1);
-
-		// Buy
-		if (detailed)
-		{
-			// openbuy_{non-componentInteractorDisocrdID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
-			int startingAmount = 0;
-			builder.WithButton("Select", customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}_{startingAmount}_{filter}", style: ButtonStyle.Success, emote: new Emoji("🏷️"));
-		}
-
-		return (embed.Build(), builder.Build());
+		return (builders.embed.Build(), builders.components.Build());
 	}
 
 

@@ -8,6 +8,7 @@ using MongoDB.Driver;
 using System.Text;
 using Discord;
 using Hackathon.DomainObjects;
+using Hackathon.Utils;
 
 namespace Hackathon.Modules;
 
@@ -17,8 +18,6 @@ public class ShopModule : ModuleBase
 	public ShopModule(ILogger<ModuleBase> logger, DatabaseService sqliteDbService, PlayerService playerService, PlayerProfileService profileService, OpenAIService openAIService, DiscordSocketClient client, InteractionHandler interaction) : base(logger, sqliteDbService, playerService, profileService, openAIService, client, interaction)
 	{
 	}
-
-
 
 	[SlashCommand("buy", "Buy item from the shop")]
 	public async Task Buy(string? searchTerm = null)
@@ -45,22 +44,7 @@ public class ShopModule : ModuleBase
 
 		var startingAmount = 0;
 
-		string[] filter;
-
-		if (!string.IsNullOrWhiteSpace(searchTerm))
-		{
-			searchTerm = searchTerm.Replace("_", "");// sanitize
-
-			filter = searchTerm
-				.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries)
-				.Select(t => t.Trim())
-				.ToArray();
-		}
-		else
-		{
-			filter = new string[0];
-		}
-
+		string[] filter = Utils.Utils.Instance.DecodeTagFilter(searchTerm!);
 
 		// Build the shop page using page index 0, compact view (detailed=false), no filter.
 		var result = ShopManager.Instance.BuildBuyInteract(_client, player, startingItem, shopKeeper, filter, startingAmount);
@@ -94,22 +78,7 @@ public class ShopModule : ModuleBase
 
 		var startingAmount = 0;
 
-		string[] filter;
-
-		if (!string.IsNullOrWhiteSpace(searchTerm))
-		{
-			searchTerm = searchTerm.Replace("_", "");// sanitize
-
-			filter = searchTerm
-				.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries)
-				.Select(t => t.Trim())
-				.ToArray();
-		}
-		else
-		{
-			filter = new string[0];
-		}
-
+		string[] filter = Utils.Utils.Instance.DecodeTagFilter(searchTerm!);
 
 		// Build the shop page using page index 0, compact view (detailed=false), no filter.
 		var result = ShopManager.Instance.BuildSellInteract(_client, buyer, startingItem, playerSeller, filter, startingAmount);

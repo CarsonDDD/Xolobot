@@ -26,7 +26,10 @@ public class PlayerService
     public Player? GetByDiscordId(string discordId)
     {
         using var conn = _db.GetConnection();
-        return conn.QuerySingleOrDefault<Player>("SELECT * FROM Player WHERE discordId = @discordId", new { discordId });
+        return conn.QuerySingleOrDefault<Player>(
+            "SELECT * FROM Player WHERE discordId = @discordId",
+            new { discordId }
+        );
     }
 
     public IEnumerable<Player> GetAll()

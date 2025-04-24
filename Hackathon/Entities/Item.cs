@@ -11,4 +11,3 @@ public class Item
     public double Weight { get; set; }
     public string? ImgUrl { get; set; }
 }
-

@@ -16,7 +16,6 @@ public class DatabaseService
         _logger.LogInformation($"Attempting to connect to db: {dbPath}");
         //_logger.LogInformation("Absolute DB path: " + Path.GetFullPath("my_database.db"));
 
-
         try
         {
             using var conn = new SQLiteConnection(_connectionString);

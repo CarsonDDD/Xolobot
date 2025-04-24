@@ -11,4 +11,3 @@ public class Player
     public string? DiscordId { get; set; }
     public string? ImgUrl { get; set; }
 }
-

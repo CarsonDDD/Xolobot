@@ -12,10 +12,11 @@ public class ShopService
         InsufficientQuantity,
         InsufficientFunds,
         ItemNotFound,
-        UnknownError
+        UnknownError,
     }
 
     private readonly DatabaseService _db;
+
     public ShopService(DatabaseService db)
     {
         _db = db;
@@ -24,11 +25,17 @@ public class ShopService
     /// <summary>
     /// Executes a transaction to transfer an item from the seller to the buyer,
     /// updating both parties’ gold and inventory.
-    /// 
+    ///
     /// For a "buy" operation, giverDiscordId should be the shopkeeper's Discord ID
     /// (the seller) and takerDiscordId the buyer's Discord ID.
     /// </summary>
-    public async Task<ShopResult> ExecuteTransaction(string type, string giverDiscordId, string takerDiscordId, int itemId, int quantity)
+    public async Task<ShopResult> ExecuteTransaction(
+        string type,
+        string giverDiscordId,
+        string takerDiscordId,
+        int itemId,
+        int quantity
+    )
     {
         using var conn = _db.GetConnection();
         // Open a transaction so that we guarantee atomic updates.
@@ -154,16 +161,27 @@ public class ShopService
                 // Insert a new row for the buyer.
                 await conn.ExecuteAsync(
                     "INSERT INTO InventoryItem (inventory_id, item_id, actualCost, amount) VALUES (@inventoryId, @itemId, @actualCost, @quantity)",
-                    new { inventoryId = buyerInventory.Id, itemId, actualCost = sellerInvItem.ActualCost, quantity },
+                    new
+                    {
+                        inventoryId = buyerInventory.Id,
+                        itemId,
+                        actualCost = sellerInvItem.ActualCost,
+                        quantity,
+                    },
                     transaction
                 );
             }
 
             // ADJUST PRICE!!!!!!
-            int newActualCost = (int)(sellerInvItem.ActualCost * 1);// TODO: This should be above one depending on if the TYPE of transaction and if the shopkeeper is involced
+            int newActualCost = (int)(sellerInvItem.ActualCost * 1); // TODO: This should be above one depending on if the TYPE of transaction and if the shopkeeper is involced
             await conn.ExecuteAsync(
                 "UPDATE InventoryItem SET actualCost = @newActualCost WHERE inventory_id = @inventoryId AND item_id = @itemId",
-                new { newActualCost, inventoryId = buyerInventory.Id, itemId },
+                new
+                {
+                    newActualCost,
+                    inventoryId = buyerInventory.Id,
+                    itemId,
+                },
                 transaction
             );
 

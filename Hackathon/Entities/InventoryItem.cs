@@ -8,5 +8,3 @@ public class InventoryItem
     public int ActualCost { get; set; }
     public int Amount { get; set; }
 }
-
-

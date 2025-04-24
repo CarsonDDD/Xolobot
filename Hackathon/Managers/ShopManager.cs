@@ -1,290 +1,398 @@
-﻿using Discord;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
+using Discord;
 using Discord.WebSocket;
 using Hackathon.DomainObjects;
 using Hackathon.Entities;
 using Hackathon.Managers.Inventory;
 using Hackathon.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
+using Hackathon.Utility;
 
 namespace Hackathon.Managers.Shop;
 
 public class ShopManager
 {
-	public enum SHOP_RESULT
-	{
-		SUCCESS,
-		INSUFFICIENT_QUANITY,
-		INSUFFICIENT_FUNDS,
-		UNAVAILABLE,
-	}
+    public enum SHOP_RESULT
+    {
+        SUCCESS,
+        INSUFFICIENT_QUANITY,
+        INSUFFICIENT_FUNDS,
+        UNAVAILABLE,
+    }
 
-	private static ShopManager _instance;
-	private ShopManager() { }
-	public static ShopManager Instance => _instance ??= new ShopManager();
+    private static ShopManager _instance;
 
-	private const int SHOP_DB_ID = 2; // Fake player ID---xolobots id
-	public static ulong SHOP_DISCORD_ID = 1190800169411809360; // this is ugly
+    private ShopManager() { }
 
-	private const int ITEMS_PER_SHOP_PAGE = 3;
-	private const string SHOP_NAME = "**Magic store**";
-	private const string BUY_HELP_TEXT = "To view an item to purchase, use /shop view <item>";
+    public static ShopManager Instance => _instance ??= new ShopManager();
 
-	// Near identical to the inventory page. However, in the future we will change it....maybe
-	public (Embed embed, MessageComponent components)? BuildShopPage(
-		IUser user,
-		int pageIndex,
-		PlayerProfileService profileService,
-		PlayerService playerService,
-		bool detailed,
-		string? filter = null)
-	{
-		var seller = playerService.GetByDiscordId(user.Id.ToString());
-		if (seller == null) return null;
+    private const int SHOP_DB_ID = 2; // Fake player ID---xolobots id
+    public static ulong SHOP_DISCORD_ID = 1190800169411809360; // this is ugly
 
-		var sellerProfile = profileService.GetProfile(seller.Id);
-		if (sellerProfile?.Inventory == null || sellerProfile.Inventory.Items.Count == 0) return null;
+    private const int ITEMS_PER_SHOP_PAGE = 3;
+    private const string SHOP_NAME = "**Magic store**";
+    private const string BUY_HELP_TEXT = "To view an item to purchase, use /shop view <item>";
 
-		// Get list of items depending on filter.
-		List<ItemStack> items = !string.IsNullOrWhiteSpace(filter) ?
-		sellerProfile.Inventory.FilterList(Utils.Utils.Instance.DecodeTagFilter(filter)) :
-		sellerProfile.Inventory.Items;
-		if (items.Count == 0) return (ItemManager.Instance.CreateItemNotFound().Build(), new ComponentBuilder().Build());
+    // Near identical to the inventory page. However, in the future we will change it....maybe
+    public (Embed embed, MessageComponent components)? BuildShopPage(
+        IUser user,
+        int pageIndex,
+        PlayerProfileService profileService,
+        PlayerService playerService,
+        bool detailed,
+        string? filter = null
+    )
+    {
+        var seller = playerService.GetByDiscordId(user.Id.ToString());
+        if (seller == null)
+            return null;
 
-		// Regardless of filtering, detailed view is only when detailed=true.
-		int itemsPerPage = detailed ? 1 : InventoryManager.ITEMS_PER_PAGE;
-		var pagedItems = items.Skip(pageIndex * itemsPerPage).Take(itemsPerPage);
-		ItemStack? displayedItem = pagedItems.First();
-		string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Shop";
-		string baseId = $"shop_{detailed}_{user.Id}";
+        var sellerProfile = profileService.GetProfile(seller.Id);
+        if (sellerProfile?.Inventory == null || sellerProfile.Inventory.Items.Count == 0)
+            return null;
 
-		// openbuy_{non-componentInteractorDisocrdID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
-		int startingAmount = 0;
-		ButtonBuilder selectButton = new ButtonBuilder("Select", customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}_{startingAmount}_{filter}", style: ButtonStyle.Success, emote: new Emoji("🏷️"));
-		var builders = ItemManager.Instance.BuildItemDisplayPage(user, items, displayedItem, pageIndex, itemsPerPage, detailed, authorName, filter, baseId, selectButton);
-		builders.embed.WithColor(Color.Purple);
+        // Get list of items depending on filter.
+        List<ItemStack> items = !string.IsNullOrWhiteSpace(filter)
+            ? sellerProfile.Inventory.FilterList(Utils.DecodeFilter(filter))
+            : sellerProfile.Inventory.Items;
+        if (items.Count == 0)
+            return (
+                ItemManager.Instance.CreateItemNotFound().Build(),
+                new ComponentBuilder().Build()
+            );
 
-		return (builders.embed.Build(), builders.components.Build());
-	}
+        // Regardless of filtering, detailed view is only when detailed=true.
+        int itemsPerPage = detailed ? 1 : InventoryManager.ITEMS_PER_PAGE;
+        var pagedItems = items.Skip(pageIndex * itemsPerPage).Take(itemsPerPage);
+        ItemStack? displayedItem = pagedItems.First();
+        string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Shop";
+        string baseId = $"shop_{detailed}_{user.Id}";
 
+        // openbuy_{non-componentInteractorDisocrdID}_{itemLedgerID}. --- Buyer if determined ONLY on press interact
+        int startingAmount = 0;
+        ButtonBuilder selectButton = new ButtonBuilder(
+            "Select",
+            customId: $"openbuy_{seller.DiscordId}_{displayedItem.Item.DbReference.Id}_{startingAmount}_{filter}",
+            style: ButtonStyle.Success,
+            emote: new Emoji("🏷️")
+        );
+        var builders = ItemManager.Instance.BuildItemDisplayPage(
+            user,
+            items,
+            displayedItem,
+            pageIndex,
+            itemsPerPage,
+            detailed,
+            authorName,
+            filter,
+            baseId,
+            selectButton
+        );
+        builders.embed.WithColor(Color.Purple);
 
-	public (Embed embed, MessageComponent components)? BuildBuyInteract(
-		DiscordSocketClient client,
-		Player player, // Player calling this function
-		ItemStack? item,
-		PlayerProfile shopKeeper, // The shopkeeper
-		string[] filter,
-		int currentAmountSelected = 0
-	)
-	{
-		// At the end, we must somehow delete the shop message or something. Or have a retry if fail saying either the item no longer exists/already bought or the quanity changed.
-		if (shopKeeper == null) throw new ArgumentNullException(nameof(shopKeeper));
+        return (builders.embed.Build(), builders.components.Build());
+    }
 
-		InventoryWithItems shopItems = shopKeeper.Inventory.FilteredInventory(filter);
+    public (Embed embed, MessageComponent components)? BuildBuyInteract(
+        DiscordSocketClient client,
+        Player player, // Player calling this function
+        ItemStack? item,
+        PlayerProfile shopKeeper, // The shopkeeper
+        string[] filter,
+        int currentAmountSelected = 0
+    )
+    {
+        // At the end, we must somehow delete the shop message or something. Or have a retry if fail saying either the item no longer exists/already bought or the quanity changed.
+        if (shopKeeper == null)
+            throw new ArgumentNullException(nameof(shopKeeper));
 
-		if (shopItems.Items.Count == 0)
-		{
-			return (ItemManager.Instance.CreateItemNotFound()
-				.WithDescription("There are no items with the specified search criteria in the shop.\nPlease try a different search or check back later.").Build(),
-				new ComponentBuilder().Build()
-			);
-		}
+        InventoryWithItems shopItems = shopKeeper.Inventory.FilteredInventory(filter);
 
-		//default to first is none was selected
-		if (item == null) item = shopItems.Items[0];
-		if (currentAmountSelected > item.DbMeta.Amount) currentAmountSelected = item.DbMeta.Amount;
+        if (shopItems.Items.Count == 0)
+        {
+            return (
+                ItemManager
+                    .Instance.CreateItemNotFound()
+                    .WithDescription(
+                        "There are no items with the specified search criteria in the shop.\nPlease try a different search or check back later."
+                    )
+                    .Build(),
+                new ComponentBuilder().Build()
+            );
+        }
 
-		int totalCost = item.DbMeta.ActualCost * Math.Max(0, currentAmountSelected);
+        //default to first is none was selected
+        if (item == null)
+            item = shopItems.Items[0];
+        if (currentAmountSelected > item.DbMeta.Amount)
+            currentAmountSelected = item.DbMeta.Amount;
 
+        int totalCost = item.DbMeta.ActualCost * Math.Max(0, currentAmountSelected);
 
-		var shopOwner = client.GetUser(ulong.Parse(shopKeeper.Player.DiscordId));
-		string authorName = ((shopOwner as IGuildUser)?.Nickname ?? shopOwner.Username) + "'s Shop";
-		var embed = ItemManager.Instance.CreateSmallDisplay(shopOwner, authorName, item, currentAmountSelected);
-		embed.WithColor(Color.Purple);
-		embed.WithFooter($"Your Gold Available: {player.Gold} gp");
-		embed.Fields[1].Name = embed.Fields[1].Name.Replace("{total}", "Total Cost");
+        var shopOwner = client.GetUser(ulong.Parse(shopKeeper.Player.DiscordId));
+        string authorName = ((shopOwner as IGuildUser)?.Nickname ?? shopOwner.Username) + "'s Shop";
+        var embed = ItemManager.Instance.CreateSmallDisplay(
+            shopOwner,
+            authorName,
+            item,
+            currentAmountSelected
+        );
+        embed.WithColor(Color.Purple);
+        embed.WithFooter($"Your Gold Available: {player.Gold} gp");
+        embed.Fields[1].Name = embed.Fields[1].Name.Replace("{total}", "Total Cost");
 
+        // Prepare a safe string representation of the filter by joining tokens with hyphen.
+        string filterParam = filter.Length > 0 ? string.Join("-", filter) : "";
 
-		// Prepare a safe string representation of the filter by joining tokens with hyphen.
-		string filterParam = filter.Length > 0 ? string.Join("-", filter) : "";
+        ComponentBuilder builder = CreateItemSelector(
+            shopItems,
+            item,
+            "buymenu_itemselector",
+            $"openbuy_{shopKeeper.Player.DiscordId}_{{i}}_1_{filterParam}",
+            "buymenu_quantselector",
+            $"openbuy_{shopKeeper.Player.DiscordId}_{item.Item.DbReference.Id}_{{i}}_{filterParam}",
+            currentAmountSelected
+        );
 
-		ComponentBuilder builder = CreateItemSelector(shopItems, item,
-		"buymenu_itemselector", $"openbuy_{shopKeeper.Player.DiscordId}_{{i}}_1_{filterParam}",
-		"buymenu_quantselector", $"openbuy_{shopKeeper.Player.DiscordId}_{item.Item.DbReference.Id}_{{i}}_{filterParam}",
-		currentAmountSelected
-		);
+        // Interact Buttons
+        string buyButtonText = null;
+        Emoji buyEmoji = null;
+        if (currentAmountSelected <= 0)
+        {
+            buyButtonText = "Select a quantity";
+            buyEmoji = new Emoji("📄");
+        }
+        else if (currentAmountSelected > 0)
+        {
+            if (player.Gold < totalCost)
+            {
+                buyButtonText = "You cannot afford this";
+                buyEmoji = new Emoji("😬");
+            }
+            else
+            {
+                if (currentAmountSelected == 1)
+                    buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}";
+                else
+                    buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}'s";
 
-		// Interact Buttons
-		string buyButtonText = null;
-		Emoji buyEmoji = null;
-		if (currentAmountSelected <= 0)
-		{
-			buyButtonText = "Select a quantity";
-			buyEmoji = new Emoji("📄");
-		}
-		else if (currentAmountSelected > 0)
-		{
-			if (player.Gold < totalCost)
-			{
-				buyButtonText = "You cannot afford this";
-				buyEmoji = new Emoji("😬");
-			}
-			else
-			{
-				if (currentAmountSelected == 1) buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}";
-				else buyButtonText = $"Buy {currentAmountSelected} {item.Item.DbReference.Name}'s";
+                buyEmoji = new Emoji("🎁");
+            }
+        }
 
-				buyEmoji = new Emoji("🎁");
-			}
-		}
+        bool canTransact = player.Gold > totalCost;
+        // transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}_{component filters}
+        builder.WithButton(
+            buyButtonText,
+            customId: $"transaction_buy_{shopKeeper.Player.DiscordId}_{player.DiscordId}_{item.Item.DbReference.Id}_{currentAmountSelected}_{filterParam}",
+            emote: buyEmoji,
+            style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary,
+            disabled: !canTransact || (currentAmountSelected <= 0)
+        );
 
+        if (canTransact && currentAmountSelected > 0)
+        {
+            builder.WithButton(
+                "Haggle",
+                customId: $"buymenu_haggle",
+                emote: new Emoji("🤌"),
+                style: ButtonStyle.Primary,
+                disabled: !canTransact || (currentAmountSelected <= 0)
+            );
+        }
 
-		bool canTransact = player.Gold > totalCost;
-		// transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}_{component filters}
-		builder.WithButton(buyButtonText, customId: $"transaction_buy_{shopKeeper.Player.DiscordId}_{player.DiscordId}_{item.Item.DbReference.Id}_{currentAmountSelected}_{filterParam}", emote: buyEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
+        return (embed.Build(), builder.Build());
+    }
 
-		if (canTransact && currentAmountSelected > 0)
-		{
-			builder.WithButton("Haggle", customId: $"buymenu_haggle", emote: new Emoji("🤌"), style: ButtonStyle.Primary, disabled: !canTransact || (currentAmountSelected <= 0));
-		}
+    public (Embed embed, MessageComponent components)? BuildSellInteract(
+        DiscordSocketClient client,
+        Player buyer, // Shop keeper
+        ItemStack currentItem,
+        PlayerProfile seller, //player calling this function
+        string[] filter,
+        int currentAmountSelected = 0
+    )
+    {
+        // At the end, we must somehow delete the shop message or something. Or have a retry if fail saying either the item no longer exists/already bought or the quanity changed.
+        if (seller == null)
+            throw new ArgumentNullException(nameof(seller));
 
-		return (embed.Build(), builder.Build());
-	}
+        InventoryWithItems sellInventory = seller.Inventory.FilteredInventory(filter);
 
-	public (Embed embed, MessageComponent components)? BuildSellInteract(
-		DiscordSocketClient client,
-		Player buyer, // Shop keeper
-		ItemStack currentItem,
-		PlayerProfile seller, //player calling this function
-		string[] filter,
-		int currentAmountSelected = 0
-	)
-	{
-		// At the end, we must somehow delete the shop message or something. Or have a retry if fail saying either the item no longer exists/already bought or the quanity changed.
-		if (seller == null) throw new ArgumentNullException(nameof(seller));
+        if (sellInventory.Items.Count == 0)
+        {
+            return (
+                ItemManager
+                    .Instance.CreateItemNotFound()
+                    .WithDescription(
+                        "You have no items with the specified search criteria.\nPlease try a different search or check back later."
+                    )
+                    .Build(),
+                new ComponentBuilder().Build()
+            );
+        }
 
-		InventoryWithItems sellInventory = seller.Inventory.FilteredInventory(filter);
+        //default to first is none was selected
+        if (currentItem == null)
+            currentItem = sellInventory.Items[0];
+        if (currentAmountSelected > currentItem.DbMeta.Amount)
+            currentAmountSelected = currentItem.DbMeta.Amount;
 
+        int totalCost = currentItem.DbMeta.ActualCost * Math.Max(0, currentAmountSelected);
 
-		if (sellInventory.Items.Count == 0)
-		{
-			return (ItemManager.Instance.CreateItemNotFound()
-				.WithDescription("You have no items with the specified search criteria.\nPlease try a different search or check back later.").Build(),
-				new ComponentBuilder().Build()
-			);
-		}
+        var shopOwner = client.GetUser(ulong.Parse(seller.Player.DiscordId));
+        string authorName =
+            ((shopOwner as IGuildUser)?.Nickname ?? shopOwner.Username) + "'s Inventory";
+        var embed = ItemManager.Instance.CreateSmallDisplay(
+            shopOwner,
+            authorName,
+            currentItem,
+            currentAmountSelected
+        );
+        embed.Fields[1].Name = embed.Fields[1].Name.Replace("{total}", "Total Gain");
+        embed.WithColor(Color.Blue);
+        embed.WithFooter($"{buyer.Name}'s Total Available Gold: {buyer.Gold} gp");
 
-		//default to first is none was selected
-		if (currentItem == null) currentItem = sellInventory.Items[0];
-		if (currentAmountSelected > currentItem.DbMeta.Amount) currentAmountSelected = currentItem.DbMeta.Amount;
+        //var builder = new ComponentBuilder();
 
-		int totalCost = currentItem.DbMeta.ActualCost * Math.Max(0, currentAmountSelected);
+        // Prepare a safe string representation of the filter by joining tokens with hyphen.
+        string filterParam = filter.Length > 0 ? string.Join("-", filter) : "";
 
-		var shopOwner = client.GetUser(ulong.Parse(seller.Player.DiscordId));
-		string authorName = ((shopOwner as IGuildUser)?.Nickname ?? shopOwner.Username) + "'s Inventory";
-		var embed = ItemManager.Instance.CreateSmallDisplay(shopOwner, authorName, currentItem, currentAmountSelected);
-		embed.Fields[1].Name = embed.Fields[1].Name.Replace("{total}", "Total Gain");
-		embed.WithColor(Color.Blue);
-		embed.WithFooter($"{buyer.Name}'s Total Available Gold: {buyer.Gold} gp");
+        ComponentBuilder builder = CreateItemSelector(
+            sellInventory,
+            currentItem,
+            "sellmenu_itemselector",
+            $"opensell_{buyer.DiscordId}_{{i}}_1_{filterParam}",
+            "sellmenu_quantselector",
+            $"opensell_{buyer.DiscordId}_{currentItem.Item.DbReference.Id}_{{i}}_{filterParam}",
+            currentAmountSelected
+        );
 
-		//var builder = new ComponentBuilder();
+        string sellButtonText = null;
+        Emoji sellEmoji = null;
+        if (currentAmountSelected <= 0)
+        {
+            sellButtonText = "Select a quantity";
+            sellEmoji = new Emoji("📄");
+        }
+        else if (currentAmountSelected > 0)
+        {
+            if (buyer.Gold < totalCost)
+            {
+                sellButtonText = "I cannot afford this";
+                sellEmoji = new Emoji("😬");
+            }
+            else
+            {
+                if (currentAmountSelected == 1)
+                    sellButtonText =
+                        $"Sell {currentAmountSelected} {currentItem.Item.DbReference.Name}";
+                else
+                    sellButtonText =
+                        $"Sell {currentAmountSelected} {currentItem.Item.DbReference.Name}'s";
 
-		// Prepare a safe string representation of the filter by joining tokens with hyphen.
-		string filterParam = filter.Length > 0 ? string.Join("-", filter) : "";
+                sellEmoji = new Emoji("📦");
+            }
+        }
 
-		ComponentBuilder builder = CreateItemSelector(sellInventory, currentItem,
-		"sellmenu_itemselector", $"opensell_{buyer.DiscordId}_{{i}}_1_{filterParam}",
-		"sellmenu_quantselector", $"opensell_{buyer.DiscordId}_{currentItem.Item.DbReference.Id}_{{i}}_{filterParam}",
-		currentAmountSelected
-		);
+        bool canTransact = buyer.Gold > totalCost;
+        // transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}_{component filters}
+        builder.WithButton(
+            sellButtonText,
+            customId: $"transaction_sell_{seller.Player.DiscordId}_{ShopManager.SHOP_DISCORD_ID}_{currentItem.Item.DbReference.Id}_{currentAmountSelected}_{filterParam}",
+            emote: sellEmoji,
+            style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary,
+            disabled: !canTransact || (currentAmountSelected <= 0)
+        );
 
-		string sellButtonText = null;
-		Emoji sellEmoji = null;
-		if (currentAmountSelected <= 0)
-		{
-			sellButtonText = "Select a quantity";
-			sellEmoji = new Emoji("📄");
-		}
-		else if (currentAmountSelected > 0)
-		{
-			if (buyer.Gold < totalCost)
-			{
-				sellButtonText = "I cannot afford this";
-				sellEmoji = new Emoji("😬");
-			}
-			else
-			{
-				if (currentAmountSelected == 1) sellButtonText = $"Sell {currentAmountSelected} {currentItem.Item.DbReference.Name}";
-				else sellButtonText = $"Sell {currentAmountSelected} {currentItem.Item.DbReference.Name}'s";
+        if (currentAmountSelected > 0 && canTransact)
+        {
+            builder.WithButton(
+                "Haggle",
+                customId: $"sellmenu_haggle",
+                emote: new Emoji("🤌"),
+                style: ButtonStyle.Primary,
+                disabled: !canTransact || (currentAmountSelected <= 0)
+            );
+        }
 
-				sellEmoji = new Emoji("📦");
-			}
-		}
+        return (embed.Build(), builder.Build());
+    }
 
+    public ComponentBuilder CreateItemSelector(
+        InventoryWithItems inventory,
+        ItemStack currentItem,
+        string itemSelectorMenuCustomId,
+        string itemSelectorCustomId,
+        string quanitySelectorMenuCustomId,
+        string quanitySelectorCustomId,
+        int currentQuantity
+    )
+    {
+        ComponentBuilder menus = new ComponentBuilder();
 
-		bool canTransact = buyer.Gold > totalCost;
-		// transaction_{string:type}_{giverDiscordID}_{takerDiscordID}_{itemID}_{quanity}_{component filters}
-		builder.WithButton(sellButtonText, customId: $"transaction_sell_{seller.Player.DiscordId}_{ShopManager.SHOP_DISCORD_ID}_{currentItem.Item.DbReference.Id}_{currentAmountSelected}_{filterParam}", emote: sellEmoji, style: canTransact ? ButtonStyle.Success : ButtonStyle.Secondary, disabled: !canTransact || (currentAmountSelected <= 0));
+        // item selector
+        var itemSelector = new List<SelectMenuOptionBuilder>();
+        int maxItem = Math.Min(25, inventory.Items.Count); // 25 is max
+        for (int i = 0; i < maxItem; i++)
+        {
+            string itemName = inventory.Items[i].Item.DbReference.Name;
+            int itemId = inventory.Items[i].Item.DbReference.Id;
+            //opensell_{non-componentInteractorDisocrdID}_{itemId}_0_{filterParam} // 0 as starting amount
+            itemSelector.Add(
+                new SelectMenuOptionBuilder(
+                    label: itemName,
+                    description: string.Join(", ", inventory.Items[i].Item.Tags),
+                    value: itemSelectorCustomId.Replace("{i}", itemId.ToString())
+                )
+            );
+        }
+        menus.WithSelectMenu(
+            customId: itemSelectorMenuCustomId,
+            options: itemSelector,
+            placeholder: currentItem.Item.DbReference.Name
+        );
 
-		if (currentAmountSelected > 0 && canTransact)
-		{
-			builder.WithButton("Haggle", customId: $"sellmenu_haggle", emote: new Emoji("🤌"), style: ButtonStyle.Primary, disabled: !canTransact || (currentAmountSelected <= 0));
-		}
+        // generate amount list.
+        var quantityOptions = new List<SelectMenuOptionBuilder>();
+        int maxQuant = Math.Min(25, currentItem.DbMeta.Amount); // 25 is max
+        for (int i = 0; i < maxQuant; i++)
+        {
+            //opensell_{non-componentInteractorDisocrdID}_{itemId}_{quantity}_{filterParam}
+            quantityOptions.Add(
+                new SelectMenuOptionBuilder(
+                    label: (i + 1).ToString(),
+                    value: quanitySelectorCustomId.Replace("{i}", (i + 1).ToString())
+                )
+            );
+        }
+        menus.WithSelectMenu(
+            customId: quanitySelectorMenuCustomId,
+            options: quantityOptions,
+            placeholder: currentQuantity > 0 ? currentQuantity.ToString() : "Select Quantity"
+        );
 
-		return (embed.Build(), builder.Build());
-	}
+        return menus;
+    }
 
-	public ComponentBuilder CreateItemSelector(InventoryWithItems inventory, ItemStack currentItem,
-		string itemSelectorMenuCustomId, string itemSelectorCustomId,
-		string quanitySelectorMenuCustomId, string quanitySelectorCustomId, int currentQuantity)
-	{
-		ComponentBuilder menus = new ComponentBuilder();
-
-		// item selector
-		var itemSelector = new List<SelectMenuOptionBuilder>();
-		int maxItem = Math.Min(25, inventory.Items.Count);// 25 is max
-		for (int i = 0; i < maxItem; i++)
-		{
-			string itemName = inventory.Items[i].Item.DbReference.Name;
-			int itemId = inventory.Items[i].Item.DbReference.Id;
-			//opensell_{non-componentInteractorDisocrdID}_{itemId}_0_{filterParam} // 0 as starting amount
-			itemSelector.Add(new SelectMenuOptionBuilder(
-				label: itemName,
-				description: string.Join(", ", inventory.Items[i].Item.Tags),
-				value: itemSelectorCustomId.Replace("{i}", itemId.ToString())
-			));
-		}
-		menus.WithSelectMenu(
-				customId: itemSelectorMenuCustomId,
-				options: itemSelector,
-				placeholder: currentItem.Item.DbReference.Name
-		);
-
-		// generate amount list.
-		var quantityOptions = new List<SelectMenuOptionBuilder>();
-		int maxQuant = Math.Min(25, currentItem.DbMeta.Amount);// 25 is max
-		for (int i = 0; i < maxQuant; i++)
-		{
-			//opensell_{non-componentInteractorDisocrdID}_{itemId}_{quantity}_{filterParam}
-			quantityOptions.Add(new SelectMenuOptionBuilder(
-				label: (i + 1).ToString(),
-				value: quanitySelectorCustomId.Replace("{i}", (i + 1).ToString())
-			));
-		}
-		menus.WithSelectMenu(
-				customId: quanitySelectorMenuCustomId,
-				options: quantityOptions,
-				placeholder: currentQuantity > 0 ? currentQuantity.ToString() : "Select Quantity"
-		);
-
-		return menus;
-	}
-
-	public static async Task<ShopService.ShopResult> ExecuteTransaction(ShopService shopService, string type, string giverDiscordId, string takerDiscordId, int itemId, int quantity)
-	{
-		return await shopService.ExecuteTransaction(type, giverDiscordId, takerDiscordId, itemId, quantity);
-	}
+    public static async Task<ShopService.ShopResult> ExecuteTransaction(
+        ShopService shopService,
+        string type,
+        string giverDiscordId,
+        string takerDiscordId,
+        int itemId,
+        int quantity
+    )
+    {
+        return await shopService.ExecuteTransaction(
+            type,
+            giverDiscordId,
+            takerDiscordId,
+            itemId,
+            quantity
+        );
+    }
 }

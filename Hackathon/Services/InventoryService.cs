@@ -16,19 +16,27 @@ public class InventoryService
     public Inventory? GetInventoryForPlayer(int playerId)
     {
         using var conn = _db.GetConnection();
-        return conn.QuerySingleOrDefault<Inventory>("SELECT * FROM Inventory WHERE player_id = @playerId", new { playerId });
+        return conn.QuerySingleOrDefault<Inventory>(
+            "SELECT * FROM Inventory WHERE player_id = @playerId",
+            new { playerId }
+        );
     }
 
     public List<InventoryItem> GetItemsInInventory(int inventoryId)
     {
         using var conn = _db.GetConnection();
-        return conn.Query<InventoryItem>("SELECT * FROM InventoryItem WHERE inventory_id = @inventoryId", new { inventoryId }).ToList();
+        return conn.Query<InventoryItem>(
+                "SELECT * FROM InventoryItem WHERE inventory_id = @inventoryId",
+                new { inventoryId }
+            )
+            .ToList();
     }
 
     public InventoryWithItems? GetInventoryWithItems(int playerId)
     {
         var inventory = GetInventoryForPlayer(playerId);
-        if (inventory == null) return null;
+        if (inventory == null)
+            return null;
 
         var itemStacks = GetItemsInInventory(inventory.Id);
 
@@ -38,33 +46,32 @@ public class InventoryService
         foreach (var invItem in itemStacks)
         {
             // Retrieve the item details.
-            var item = conn.QuerySingle<Item>("SELECT * FROM Item WHERE id = @id", new { id = invItem.Item_Id });
+            var item = conn.QuerySingle<Item>(
+                "SELECT * FROM Item WHERE id = @id",
+                new { id = invItem.Item_Id }
+            );
 
             // Retrieve the tags associated with the item.
             var tags = conn.Query<Tag>(
-                "SELECT t.* FROM ItemTag it JOIN Tag t ON t.id = it.tag_id WHERE it.item_id = @itemId",
-                new { itemId = item.Id }).ToList();
+                    "SELECT t.* FROM ItemTag it JOIN Tag t ON t.id = it.tag_id WHERE it.item_id = @itemId",
+                    new { itemId = item.Id }
+                )
+                .ToList();
 
             // Map to InventoryDisplayItem.
-            displayItems.Add(new ItemStack
-            {
-                DbMeta = invItem,
-                Item = new ItemWithTags
+            displayItems.Add(
+                new ItemStack
                 {
-                    DbReference = item,
-                    Tags = tags
-                },
-            });
+                    DbMeta = invItem,
+                    Item = new ItemWithTags { DbReference = item, Tags = tags },
+                }
+            );
         }
 
-        return new InventoryWithItems
-        {
-            Inventory = inventory,
-            Items = displayItems
-        };
+        return new InventoryWithItems { Inventory = inventory, Items = displayItems };
     }
 
-    // Both these functions may be useless, as we can easily get this info from the PlayerProfile DomainObj....However, for single lookups this may be faster 
+    // Both these functions may be useless, as we can easily get this info from the PlayerProfile DomainObj....However, for single lookups this may be faster
     /// <summary>
     /// Gets a single inventory item stack from a player given the actual Item id from the Items table.
     /// Returns null if the item is not found in the player's inventory.
@@ -73,7 +80,8 @@ public class InventoryService
     {
         // First, get the player's inventory.
         var inventory = GetInventoryForPlayer(playerId);
-        if (inventory == null) return null;
+        if (inventory == null)
+            return null;
 
         using var conn = _db.GetConnection();
 
@@ -96,25 +104,18 @@ public class InventoryService
 
         // Retrieve the tags associated with the item.
         var tags = conn.Query<Tag>(
-            @"SELECT t.* FROM ItemTag it 
+                @"SELECT t.* FROM ItemTag it 
               JOIN Tag t ON t.id = it.tag_id 
               WHERE it.item_id = @itemId",
-            new { itemId = item.Id }
-        ).ToList();
+                new { itemId = item.Id }
+            )
+            .ToList();
 
         // Build the compound ItemWithTags.
-        var itemWithTags = new ItemWithTags
-        {
-            DbReference = item,
-            Tags = tags
-        };
+        var itemWithTags = new ItemWithTags { DbReference = item, Tags = tags };
 
         // Create the inventory display object (ItemStack) that will be returned.
-        var stack = new ItemStack
-        {
-            DbMeta = invItem,
-            Item = itemWithTags
-        };
+        var stack = new ItemStack { DbMeta = invItem, Item = itemWithTags };
 
         return stack;
     }
@@ -127,7 +128,8 @@ public class InventoryService
             "SELECT * FROM Player WHERE discordId = @discordId",
             new { discordId = discordId.ToString() }
         );
-        if (player == null) return null;
+        if (player == null)
+            return null;
 
         return GetInventoryItemStack(itemId, player.Id);
     }

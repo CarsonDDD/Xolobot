@@ -17,7 +17,10 @@ public class ItemService
     public Item? GetById(int itemId)
     {
         using var conn = _db.GetConnection();
-        return conn.QuerySingleOrDefault<Item>("SELECT * FROM Item WHERE id = @id", new { id = itemId });
+        return conn.QuerySingleOrDefault<Item>(
+            "SELECT * FROM Item WHERE id = @id",
+            new { id = itemId }
+        );
     }
 
     public List<Item> GetAll()
@@ -30,20 +33,19 @@ public class ItemService
     {
         using var conn = _db.GetConnection();
         return conn.Query<Tag>(
-            "SELECT t.* FROM ItemTag it JOIN Tag t ON t.id = it.tag_id WHERE it.item_id = @itemId",
-            new { itemId }).ToList();
+                "SELECT t.* FROM ItemTag it JOIN Tag t ON t.id = it.tag_id WHERE it.item_id = @itemId",
+                new { itemId }
+            )
+            .ToList();
     }
 
     public ItemWithTags? GetItemWithTags(int itemId)
     {
         var item = GetById(itemId);
-        if (item == null) return null;
+        if (item == null)
+            return null;
 
         var tags = GetTagsForItem(itemId);
-        return new ItemWithTags
-        {
-            DbReference = item,
-            Tags = tags
-        };
+        return new ItemWithTags { DbReference = item, Tags = tags };
     }
 }

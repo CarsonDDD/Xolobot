@@ -1,6 +1,6 @@
 using Hackathon.Entities;
-namespace Hackathon.DomainObjects;
 
+namespace Hackathon.DomainObjects;
 
 public class InventoryWithItems
 {
@@ -14,21 +14,23 @@ public class InventoryWithItems
 
         var lowerTerms = terms.Select(term => term.ToLowerInvariant()).ToList();
 
-        var filtered = this.Items.Where(stack =>
-            lowerTerms.Any(term => stack.Item.DbReference.Name.ToLowerInvariant().Contains(term)) ||
-            stack.Item.Tags.Any(tag => lowerTerms.Any(term => tag.Label.ToLowerInvariant().Contains(term)))
-        ).ToList();
+        var filtered = this
+            .Items.Where(stack =>
+                lowerTerms.Any(term =>
+                    stack.Item.DbReference.Name.ToLowerInvariant().Contains(term)
+                )
+                || stack.Item.Tags.Any(tag =>
+                    lowerTerms.Any(term => tag.Label.ToLowerInvariant().Contains(term))
+                )
+            )
+            .ToList();
 
         return filtered;
     }
 
     public InventoryWithItems FilteredInventory(string[] terms)
     {
-        return new InventoryWithItems
-        {
-            Inventory = this.Inventory,
-            Items = FilterList(terms)
-        };
+        return new InventoryWithItems { Inventory = this.Inventory, Items = FilterList(terms) };
     }
 }
 
@@ -41,5 +43,5 @@ public class ItemWithTags
 public class ItemStack
 {
     public InventoryItem DbMeta { get; set; } // Contains inventory meta for the item (quantity, local price for the items in the stack)
-    public ItemWithTags Item { get; set; }// compound Item from db
+    public ItemWithTags Item { get; set; } // compound Item from db
 }

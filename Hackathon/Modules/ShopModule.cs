@@ -1,23 +1,39 @@
-﻿using Discord.Interactions;
+﻿using System.Text;
+using Discord;
+using Discord.Interactions;
 using Discord.WebSocket;
-using Hackathon.Services;
-using Microsoft.Extensions.Logging;
+using Hackathon.DomainObjects;
 using Hackathon.Managers.Shop;
+using Hackathon.Services;
+using Hackathon.Utility;
+using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using System.Text;
-using Discord;
-using Hackathon.DomainObjects;
-using Hackathon.Utils;
 
 namespace Hackathon.Modules;
 
 [Group("shop", "commands for interacting with xolobot")]
 public class ShopModule : ModuleBase
 {
-	public ShopModule(ILogger<ModuleBase> logger, DatabaseService sqliteDbService, PlayerService playerService, PlayerProfileService profileService, OpenAIService openAIService, DiscordSocketClient client, InteractionHandler interaction) : base(logger, sqliteDbService, playerService, profileService, openAIService, client, interaction)
-	{
-	}
+	public ShopModule(
+		ILogger<ModuleBase> logger,
+		DatabaseService sqliteDbService,
+		PlayerService playerService,
+		PlayerProfileService profileService,
+		OpenAIService openAIService,
+		DiscordSocketClient client,
+		InteractionHandler interaction
+	)
+		: base(
+			logger,
+			sqliteDbService,
+			playerService,
+			profileService,
+			openAIService,
+			client,
+			interaction
+		)
+	{ }
 
 	[SlashCommand("buy", "Buy item from the shop")]
 	public async Task Buy(string? searchTerm = null)
@@ -28,7 +44,9 @@ public class ShopModule : ModuleBase
 		await DeferAsync(ephemeral: true);
 
 		ItemStack? startingItem = null;
-		var shopKeeper = _profileService.GetProfileByDiscordId(ShopManager.SHOP_DISCORD_ID.ToString());
+		var shopKeeper = _profileService.GetProfileByDiscordId(
+			ShopManager.SHOP_DISCORD_ID.ToString()
+		);
 		if (shopKeeper == null || shopKeeper.Inventory == null)
 		{
 			await FollowupAsync("Shopkeeper not found or shop is empty.", ephemeral: true);
@@ -44,10 +62,17 @@ public class ShopModule : ModuleBase
 
 		var startingAmount = 0;
 
-		string[] filter = Utils.Utils.Instance.DecodeTagFilter(searchTerm!);
+		string[] filter = Utils.DecodeFilter(searchTerm!);
 
 		// Build the shop page using page index 0, compact view (detailed=false), no filter.
-		var result = ShopManager.Instance.BuildBuyInteract(_client, player, startingItem, shopKeeper, filter, startingAmount);
+		var result = ShopManager.Instance.BuildBuyInteract(
+			_client,
+			player,
+			startingItem,
+			shopKeeper,
+			filter,
+			startingAmount
+		);
 
 		var (embed, components) = result.Value;
 		await FollowupAsync(embed: embed, components: components, ephemeral: true);
@@ -78,10 +103,17 @@ public class ShopModule : ModuleBase
 
 		var startingAmount = 0;
 
-		string[] filter = Utils.Utils.Instance.DecodeTagFilter(searchTerm!);
+		string[] filter = Utils.DecodeFilter(searchTerm!);
 
 		// Build the shop page using page index 0, compact view (detailed=false), no filter.
-		var result = ShopManager.Instance.BuildSellInteract(_client, buyer, startingItem, playerSeller, filter, startingAmount);
+		var result = ShopManager.Instance.BuildSellInteract(
+			_client,
+			buyer,
+			startingItem,
+			playerSeller,
+			filter,
+			startingAmount
+		);
 
 		var (embed, components) = result.Value;
 		await FollowupAsync(embed: embed, components: components, ephemeral: true);
@@ -97,7 +129,14 @@ public class ShopModule : ModuleBase
 		string filterParam = !string.IsNullOrWhiteSpace(filter) ? filter : "";
 
 		// Build the shop page using page index 0, compact view (detailed=false), no filter.
-		var result = ShopManager.Instance.BuildShopPage(shopkeeper, 0, _profileService, _playerService, true, filterParam);
+		var result = ShopManager.Instance.BuildShopPage(
+			shopkeeper,
+			0,
+			_profileService,
+			_playerService,
+			true,
+			filterParam
+		);
 		if (result == null)
 		{
 			await FollowupAsync("The shop is currently empty.");
@@ -107,5 +146,4 @@ public class ShopModule : ModuleBase
 		var (embed, components) = result.Value;
 		await FollowupAsync(embed: embed, components: components);
 	}
-
 }

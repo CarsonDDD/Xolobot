@@ -14,4 +14,3 @@ public class PlayerProfile
     public List<Proficiency> Proficiencies { get; set; }
     public InventoryWithItems Inventory { get; set; }
 }
-

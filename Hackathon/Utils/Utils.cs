@@ -1,4 +1,4 @@
-namespace Hackathon.Utils;
+namespace Hackathon.Utility;
 
 public class Utils
 {
@@ -17,14 +17,13 @@ public class Utils
         }
     }
 
-
-    public string[] DecodeTagFilter(string filterString)
+    public static string[] DecodeFilter(string filterString)
     {
         string[] terms = new string[0];
 
         if (!string.IsNullOrWhiteSpace(filterString))
         {
-            filterString = filterString.Replace("_", "");// sanitize
+            filterString = filterString.Replace("_", ""); // sanitize
 
             terms = filterString
                 .Replace("_", "")
@@ -34,14 +33,5 @@ public class Utils
         }
 
         return terms;
-        /*if (terms == null)
-        {
-            //throw new Exception("Invalid filter string to decode: " + filterString);
-        }
-        else
-        {
-            return terms;
-        }*/
     }
-
 }

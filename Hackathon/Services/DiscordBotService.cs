@@ -15,7 +15,13 @@ public class DiscordBotService : IHostedService
     private readonly ILogger _logger;
     private readonly InteractionHandler _interactionHandler;
 
-    public DiscordBotService(DiscordSocketClient client, InteractionService interactions, IConfiguration config, ILogger<DiscordBotService> logger, InteractionHandler interactionHandler)
+    public DiscordBotService(
+        DiscordSocketClient client,
+        InteractionService interactions,
+        IConfiguration config,
+        ILogger<DiscordBotService> logger,
+        InteractionHandler interactionHandler
+    )
     {
         _client = client;
         _interactions = interactions;
@@ -47,14 +53,15 @@ public class DiscordBotService : IHostedService
     {
         _logger.LogInformation($"Logged as {_client.CurrentUser}");
 
-		//await _interactions.RegisterCommandsGloballyAsync();
+        //await _interactions.RegisterCommandsGloballyAsync();
 
-		// Register commands for each guild the bot is in
-		foreach(var guild in _client.Guilds) {
-			await _interactions.RegisterCommandsToGuildAsync(guild.Id);
-			_logger.LogInformation($"Registered commands to guild: {guild.Name} (ID: {guild.Id})");
-		}
-	}
+        // Register commands for each guild the bot is in
+        foreach (var guild in _client.Guilds)
+        {
+            await _interactions.RegisterCommandsToGuildAsync(guild.Id);
+            _logger.LogInformation($"Registered commands to guild: {guild.Name} (ID: {guild.Id})");
+        }
+    }
 
     public async Task LogAsync(LogMessage msg)
     {
@@ -66,7 +73,7 @@ public class DiscordBotService : IHostedService
             LogSeverity.Info => LogLevel.Information,
             LogSeverity.Verbose => LogLevel.Trace,
             LogSeverity.Debug => LogLevel.Debug,
-            _ => LogLevel.Information
+            _ => LogLevel.Information,
         };
 
         _logger.Log(severity, msg.Exception, msg.Message);

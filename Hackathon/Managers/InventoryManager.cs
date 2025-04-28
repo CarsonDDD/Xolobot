@@ -1,3 +1,4 @@
+using System.Text;
 using Discord;
 using Discord.WebSocket;
 using Hackathon.DomainObjects;
@@ -75,45 +76,55 @@ public class InventoryManager
         return (builders.embed.Build(), builders.components.Build());
     }
 
-    public async Task ShowInventoryPage(
-        ISocketMessageChannel location,
+    public (Embed embed, MessageComponent components)? BuildInventoryList(
         IUser user,
-        int pageIndex,
+        string filter,
         PlayerProfileService profileService,
-        PlayerService playerService,
-        bool detailed,
-        IUserMessage? existingMessage = null
+        PlayerService playerService
     )
     {
-        var result = BuildInventoryPage(
-            user,
-            pageIndex,
-            profileService,
-            playerService,
-            detailed,
-            null
-        );
-        if (result == null)
+        var player = playerService.GetByDiscordId(user.Id.ToString());
+        if (player == null)
+            return null;
+
+        var profile = profileService.GetProfile(player.Id);
+        if (profile?.Inventory == null || profile.Inventory.Items.Count == 0)
+            return null;
+
+        // Get list of items depending on filter.
+        List<ItemStack> items = !string.IsNullOrWhiteSpace(filter)
+            ? profile.Inventory.FilterList(Utils.DecodeFilter(filter))
+            : profile.Inventory.Items;
+        if (items.Count == 0)
         {
-            await location.SendMessageAsync(
-                $"{user.Mention}, your inventory is empty or you are not registered."
+            return (
+                ItemManager.Instance.CreateItemNotFound().Build(),
+                new ComponentBuilder().Build()
             );
-            return;
         }
 
-        var (embed, components) = result.Value;
+        EmbedBuilder embedBuilder = new EmbedBuilder()
+            .WithTitle($"{user.Username}'s Inventory")
+            .WithDescription("Here are the items:")
+            .WithColor(Color.DarkBlue);
 
-        if (existingMessage != null)
+        if (!string.IsNullOrWhiteSpace(filter)) embedBuilder.WithFooter("Showing results for: '" + filter + "'");
+
+
+        StringBuilder itemListBuilder = new StringBuilder();
+
+        foreach (var item in items)
         {
-            await existingMessage.ModifyAsync(msg =>
-            {
-                msg.Embed = embed;
-                msg.Components = components;
-            });
+            itemListBuilder.AppendLine($"- **{item.Item.DbReference.Name}** x{item.DbMeta.Amount}");
         }
-        else
-        {
-            await location.SendMessageAsync(embed: embed, components: components);
-        }
+
+        embedBuilder.AddField("Items:", itemListBuilder.ToString());
+
+        MessageComponent components = new ComponentBuilder()
+            .Build();
+
+        return (embedBuilder.Build(), components);
     }
+
+
 }

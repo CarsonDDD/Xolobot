@@ -495,7 +495,15 @@ public class InteractionHandler
                 return;
             }
             var (embed, components) = updatedComp.Value;
-            await component.RespondAsync(embed: embed, components: components, ephemeral: true);
+            //await component.RespondAsync(embed: embed, components: components, ephemeral: true);
+
+            await component.UpdateAsync(msg =>
+            {
+                msg.Content = "Items changed!";
+                msg.Components = null;
+                msg.Embed = null;
+                // Update existing component instead of using respond.
+            });
         }
 
         //await component.RespondAsync(message + "\n" + result, ephemeral: true);

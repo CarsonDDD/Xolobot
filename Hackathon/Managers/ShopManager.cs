@@ -147,7 +147,7 @@ public class ShopManager
         // Prepare a safe string representation of the filter by joining tokens with hyphen.
         string filterParam = filter.Length > 0 ? string.Join("-", filter) : "";
 
-        ComponentBuilder builder = CreateItemSelector(
+        ComponentBuilder builder = ItemManager.Instance.CreateItemSelector(
             shopItems,
             item,
             "buymenu_itemselector",
@@ -261,7 +261,7 @@ public class ShopManager
         // Prepare a safe string representation of the filter by joining tokens with hyphen.
         string filterParam = filter.Length > 0 ? string.Join("-", filter) : "";
 
-        ComponentBuilder builder = CreateItemSelector(
+        ComponentBuilder builder = ItemManager.Instance.CreateItemSelector(
             sellInventory,
             currentItem,
             "sellmenu_itemselector",
@@ -320,62 +320,6 @@ public class ShopManager
         }
 
         return (embed.Build(), builder.Build());
-    }
-
-    public ComponentBuilder CreateItemSelector(
-        InventoryWithItems inventory,
-        ItemStack currentItem,
-        string itemSelectorMenuCustomId,
-        string itemSelectorCustomId,
-        string quanitySelectorMenuCustomId,
-        string quanitySelectorCustomId,
-        int currentQuantity
-    )
-    {
-        ComponentBuilder menus = new ComponentBuilder();
-
-        // item selector
-        var itemSelector = new List<SelectMenuOptionBuilder>();
-        int maxItem = Math.Min(25, inventory.Items.Count); // 25 is max
-        for (int i = 0; i < maxItem; i++)
-        {
-            string itemName = inventory.Items[i].Item.DbReference.Name;
-            int itemId = inventory.Items[i].Item.DbReference.Id;
-            //opensell_{non-componentInteractorDisocrdID}_{itemId}_0_{filterParam} // 0 as starting amount
-            itemSelector.Add(
-                new SelectMenuOptionBuilder(
-                    label: itemName,
-                    description: string.Join(", ", inventory.Items[i].Item.Tags),
-                    value: itemSelectorCustomId.Replace("{i}", itemId.ToString())
-                )
-            );
-        }
-        menus.WithSelectMenu(
-            customId: itemSelectorMenuCustomId,
-            options: itemSelector,
-            placeholder: currentItem.Item.DbReference.Name
-        );
-
-        // generate amount list.
-        var quantityOptions = new List<SelectMenuOptionBuilder>();
-        int maxQuant = Math.Min(25, currentItem.DbMeta.Amount); // 25 is max
-        for (int i = 0; i < maxQuant; i++)
-        {
-            //opensell_{non-componentInteractorDisocrdID}_{itemId}_{quantity}_{filterParam}
-            quantityOptions.Add(
-                new SelectMenuOptionBuilder(
-                    label: (i + 1).ToString(),
-                    value: quanitySelectorCustomId.Replace("{i}", (i + 1).ToString())
-                )
-            );
-        }
-        menus.WithSelectMenu(
-            customId: quanitySelectorMenuCustomId,
-            options: quantityOptions,
-            placeholder: currentQuantity > 0 ? currentQuantity.ToString() : "Select Quantity"
-        );
-
-        return menus;
     }
 
     public static async Task<ShopService.ShopResult> ExecuteTransaction(

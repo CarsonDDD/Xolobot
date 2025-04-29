@@ -2,6 +2,7 @@ using System.Text;
 using Discord;
 using Discord.WebSocket;
 using Hackathon.DomainObjects;
+using Hackathon.Entities;
 using Hackathon.Managers.Shop;
 using Hackathon.Services;
 using Hackathon.Utility;
@@ -73,6 +74,15 @@ public class InventoryManager
         );
         builders.embed.WithColor(Color.Blue);
 
+        // Delete Button.
+        // ALL THIS DOES IS OPEN THE CONFIRMATION MENU
+        builders.components.WithButton(
+            label: " ",
+            customId: $"opendelete_{displayedItem.DbMeta.Id}_0",
+            style: ButtonStyle.Danger,
+            emote: new Emoji("🗑️")
+        );
+
         return (builders.embed.Build(), builders.components.Build());
     }
 
@@ -108,8 +118,8 @@ public class InventoryManager
             .WithDescription("Here are the items:")
             .WithColor(Color.DarkBlue);
 
-        if (!string.IsNullOrWhiteSpace(filter)) embedBuilder.WithFooter("Showing results for: '" + filter + "'");
-
+        if (!string.IsNullOrWhiteSpace(filter))
+            embedBuilder.WithFooter("Showing results for: '" + filter + "'");
 
         StringBuilder itemListBuilder = new StringBuilder();
 
@@ -120,11 +130,40 @@ public class InventoryManager
 
         embedBuilder.AddField("Items:", itemListBuilder.ToString());
 
-        MessageComponent components = new ComponentBuilder()
-            .Build();
+        MessageComponent components = new ComponentBuilder().Build();
 
         return (embedBuilder.Build(), components);
     }
 
+    public (Embed embed, MessageComponent component)? BuildDeleteMenu(
+        InventoryItem item,
+        int currentAmountSelected = 0
+    )
+    {
+        EmbedBuilder embedBuilder = new EmbedBuilder()
+            .WithTitle($"Are you sure you want to delete this?")
+            .WithDescription("Here are the items:")
+            .WithColor(Color.Red);
 
+        SelectMenuBuilder smb = ItemManager.Instance.CreateQuantitySelector(
+            "deletemenu_quantselector",
+            $"opendelete_{item.Id}_{{i}}",
+            item.Amount,
+            currentAmountSelected
+        );
+
+        ComponentBuilder menus = new ComponentBuilder()
+            .WithSelectMenu(smb)
+            .WithButton(
+                label: currentAmountSelected > 0
+                    ? $"DELETE **{currentAmountSelected}** ITEMS NOW!"
+                    : "Select Quantity",
+                customId: $"delete_{item.Id}_{item.Amount}_{currentAmountSelected}",
+                /*emote: new Emoji("❌"),*/
+                style: ButtonStyle.Danger,
+                disabled: currentAmountSelected <= 0
+            );
+
+        return (embedBuilder.Build(), menus.Build());
+    }
 }

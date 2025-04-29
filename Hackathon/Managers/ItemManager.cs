@@ -132,4 +132,139 @@ public class ItemManager
 
         return (embed, builder);
     }
+
+    /*public ComponentBuilder CreateItemSelector(
+        InventoryWithItems inventory,
+        ItemStack currentItem,
+        string itemSelectorMenuCustomId,
+        string itemSelectorCustomId,
+        string quanitySelectorMenuCustomId,
+        string quanitySelectorCustomId,
+        int currentQuantity
+    )
+    {
+        ComponentBuilder menus = new ComponentBuilder();
+
+        // item selector
+        var itemSelector = new List<SelectMenuOptionBuilder>();
+        int maxItem = Math.Min(25, inventory.Items.Count); // 25 is max
+        for (int i = 0; i < maxItem; i++)
+        {
+            string itemName = inventory.Items[i].Item.DbReference.Name;
+            int itemId = inventory.Items[i].Item.DbReference.Id;
+            //opensell_{non-componentInteractorDisocrdID}_{itemId}_0_{filterParam} // 0 as starting amount
+            itemSelector.Add(
+                new SelectMenuOptionBuilder(
+                    label: itemName,
+                    description: string.Join(", ", inventory.Items[i].Item.Tags),
+                    value: itemSelectorCustomId.Replace("{i}", itemId.ToString())
+                )
+            );
+        }
+        menus.WithSelectMenu(
+            customId: itemSelectorMenuCustomId,
+            options: itemSelector,
+            placeholder: currentItem.Item.DbReference.Name
+        );
+
+        // generate amount list.
+        var quantityOptions = new List<SelectMenuOptionBuilder>();
+        int maxQuant = Math.Min(25, currentItem.DbMeta.Amount); // 25 is max
+        for (int i = 0; i < maxQuant; i++)
+        {
+            //opensell_{non-componentInteractorDisocrdID}_{itemId}_{quantity}_{filterParam}
+            quantityOptions.Add(
+                new SelectMenuOptionBuilder(
+                    label: (i + 1).ToString(),
+                    value: quanitySelectorCustomId.Replace("{i}", (i + 1).ToString())
+                )
+            );
+        }
+        menus.WithSelectMenu(
+            customId: quanitySelectorMenuCustomId,
+            options: quantityOptions,
+            placeholder: currentQuantity > 0 ? currentQuantity.ToString() : "Select Quantity"
+        );
+
+        return menus;
+    }*/
+
+    public ComponentBuilder CreateItemSelector(
+       InventoryWithItems inventory,
+       ItemStack currentItem,
+       string itemSelectorMenuCustomId,
+       string itemSelectorCustomId,
+       string quantitySelectorMenuCustomId,
+       string quantitySelectorCustomId,
+       int currentQuantity
+    )
+    {
+        ComponentBuilder menus = new ComponentBuilder();
+
+        // item selector dropdown
+        var itemOptions = new List<SelectMenuOptionBuilder>();
+        int maxItem = Math.Min(25, inventory.Items.Count); // Discord max is 25
+
+        for (int i = 0; i < maxItem; i++)
+        {
+            string itemName = inventory.Items[i].Item.DbReference.Name;
+            int itemId = inventory.Items[i].Item.DbReference.Id;
+
+            itemOptions.Add(
+                new SelectMenuOptionBuilder(
+                    label: itemName,
+                    description: string.Join(", ", inventory.Items[i].Item.Tags),
+                    value: itemSelectorCustomId.Replace("{i}", itemId.ToString())
+                )
+            );
+        }
+
+        var itemSelectMenu = new SelectMenuBuilder()
+            .WithCustomId(itemSelectorMenuCustomId)
+            .WithOptions(itemOptions)
+            .WithPlaceholder(currentItem.Item.DbReference.Name);
+
+        menus.WithSelectMenu(itemSelectMenu);
+
+        // quantity selector dropdown (reusable)
+        var quantitySelectMenu = CreateQuantitySelector(
+            customIdMenuTemplate: quantitySelectorMenuCustomId,
+            customIdSelectorTemplate: quantitySelectorCustomId,
+            maxQuantity: currentItem.DbMeta.Amount,
+            currentQuantity: currentQuantity
+        );
+
+        menus.WithSelectMenu(quantitySelectMenu);
+
+        return menus;
+    }
+
+
+
+    public SelectMenuBuilder CreateQuantitySelector(
+        string customIdMenuTemplate,
+        string customIdSelectorTemplate,
+        int maxQuantity,
+        int currentQuantity = 0
+    )
+    {
+        var quantityOptions = new List<SelectMenuOptionBuilder>();
+        int cappedMax = Math.Min(25, maxQuantity); // Discord max is 25
+
+        for (int i = 0; i < cappedMax; i++)
+        {
+            quantityOptions.Add(
+                new SelectMenuOptionBuilder(
+                    label: (i + 1).ToString(),
+                    value: customIdSelectorTemplate.Replace("{i}", (i + 1).ToString())
+                )
+            );
+        }
+
+        return new SelectMenuBuilder()
+            .WithCustomId(customIdMenuTemplate)
+            .WithOptions(quantityOptions)
+            .WithPlaceholder(currentQuantity > 0 ? currentQuantity.ToString() : "Select Quantity");
+    }
+
 }

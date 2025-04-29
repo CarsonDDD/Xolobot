@@ -133,4 +133,73 @@ public class InventoryService
 
         return GetInventoryItemStack(itemId, player.Id);
     }
+
+    public InventoryItem? GetInventoryItem(int databaseId)
+    {
+        using var conn = _db.GetConnection();
+        return conn.QuerySingleOrDefault<InventoryItem>(
+            "SELECT * FROM InventoryItem WHERE id = @id",
+            new { id = databaseId }
+        );
+    }
+
+    public enum ModifyInventoryResult
+    {
+        NotFound,
+        Updated,
+        Deleted,
+        InvalidArgument,
+    }
+
+    // Used for deleting items, however in the future maybe other things?
+    public (ModifyInventoryResult result, int? newAmount) ChangeInventoryItemQuantity(
+        int inventoryItemId,
+        int delta
+    )
+    {
+        if (delta == 0)
+            return (ModifyInventoryResult.InvalidArgument, null);
+
+        using var conn = _db.GetConnection();
+        using var tx = conn.BeginTransaction();
+
+        var invItem = conn.QuerySingleOrDefault<InventoryItem>(
+            "SELECT * FROM InventoryItem WHERE id = @id",
+            new { id = inventoryItemId },
+            transaction: tx
+        );
+
+        if (invItem == null)
+        {
+            tx.Commit();
+            return (ModifyInventoryResult.NotFound, null);
+        }
+
+        int newAmount = invItem.Amount + delta;
+
+        if (newAmount > 0)
+        {
+            conn.Execute(
+                "UPDATE InventoryItem SET amount = @newAmount WHERE id = @id",
+                new { newAmount, id = inventoryItemId },
+                transaction: tx
+            );
+
+            tx.Commit();
+            return (ModifyInventoryResult.Updated, newAmount);
+        }
+        else
+        {
+            // Remove from table
+            // Do I need to delete from anywhere else?
+            conn.Execute(
+                "DELETE FROM InventoryItem WHERE id = @id",
+                new { id = inventoryItemId },
+                transaction: tx
+            );
+
+            tx.Commit();
+            return (ModifyInventoryResult.Deleted, newAmount);
+        }
+    }
 }

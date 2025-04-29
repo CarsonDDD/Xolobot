@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Hackathon.Entities;
 using Hackathon.Managers.Inventory;
 using Hackathon.Managers.Shop;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,7 @@ public class InteractionHandler
     private readonly PlayerService _playerService;
     private readonly PlayerProfileService _profileService;
     private readonly InventoryService _inventoryService;
+    private readonly ItemService _itemService;
     private readonly ShopService _shopService;
 
     public delegate void BotResponseEvent(object sender, BotResponseArgs e);
@@ -49,7 +51,8 @@ public class InteractionHandler
         PlayerService playerService,
         PlayerProfileService profileService,
         InventoryService inventoryService,
-        ShopService shopService
+        ShopService shopService,
+        ItemService itemService
     )
     {
         _interactionService = interactionService;
@@ -62,6 +65,7 @@ public class InteractionHandler
         _profileService = profileService;
         _inventoryService = inventoryService;
         _shopService = shopService;
+        _itemService = itemService;
 
         // events
         _client.ButtonExecuted += ButtonHandler;
@@ -123,6 +127,48 @@ public class InteractionHandler
         {
             await HandleUpdateSellMenuAmount(component, component.Data.Values);
         }
+        else if (component.Data.CustomId.StartsWith("deletemenu_quantselector"))
+        {
+            await HandleUpdateDeleteMenuAmount(component, component.Data.Values);
+        }
+    }
+
+    private async Task HandleUpdateDeleteMenuAmount(
+        SocketMessageComponent component,
+        IReadOnlyCollection<string> values
+    )
+    {
+        var parts = values.First().Split('_');
+        // opendelete_{inventoryItemID}_{amount}
+        /*if (parts.Length < 4)
+        {
+            await component.RespondAsync("error in custom ID.", ephemeral: true);
+            return;
+        }*/
+
+        int itemId = int.Parse(parts[1]); // db ledger reference
+        int amount = int.Parse(parts[2]);
+
+        InventoryItem item = _inventoryService.GetInventoryItem(itemId);
+
+        var result = InventoryManager.Instance.BuildDeleteMenu(item, amount);
+
+        if (result == null)
+        {
+            await component.RespondAsync(
+                "No matching items.---SOMETHING WENT WRONG AAH",
+                ephemeral: true
+            );
+            return;
+        }
+
+        var (embed, components) = result.Value;
+
+        await component.UpdateAsync(msg =>
+        {
+            msg.Embed = embed;
+            msg.Components = components;
+        });
     }
 
     private async Task HandleUpdateSellMenuAmount(
@@ -282,6 +328,95 @@ public class InteractionHandler
         {
             await HandleTransactionButton(component);
         }
+        else if (component.Data.CustomId.StartsWith("opendelete_"))
+        {
+            await HandleOpenDelete(component);
+        }
+        else if (component.Data.CustomId.StartsWith("delete_"))
+        {
+            await HandleDelete(component);
+        }
+    }
+
+    private async Task HandleOpenDelete(SocketMessageComponent component)
+    {
+        // opendelete_{inventoryItemID}_{amount}
+        var parts = component.Data.CustomId.Split('_');
+        /*if (parts.Length < 4)
+        {
+            await component.RespondAsync("error in custom ID.", ephemeral: true);
+            return;
+        }*/
+
+        int itemId = int.Parse(parts[1]); // db ledger reference
+        int amount = int.Parse(parts[2]);
+
+        InventoryItem item = _inventoryService.GetInventoryItem(itemId);
+        // Get in-mem profile to create display---only in the actual delete we only care about DB operations.
+        // However, in the content we actually want to display, do we actually care/need the player infor to make this display?
+        // yes, we need the amount.
+
+        /*
+        What we need:
+        - ItemStack(DOM)/InventoryItem(DB): Item amount (selector)
+        - String: PlayerID (to call the delete function) (essentially hidden) (Database ID)
+        - ItemStack(DOM)/Item(DB) Item info for display
+        */
+
+        var result = InventoryManager.Instance.BuildDeleteMenu(item, amount);
+
+        if (result == null)
+        {
+            await component.RespondAsync(
+                "No matching items.---SOMETHING WENT WRONG AAH",
+                ephemeral: true
+            );
+            return;
+        }
+
+        var (embed, components) = result.Value;
+        await component.RespondAsync(embed: embed, components: components, ephemeral: true);
+        //await component.RespondAsync("You are tryna delete something", ephemeral: true);
+
+        return;
+    }
+
+    private async Task HandleDelete(SocketMessageComponent component)
+    {
+        // delete_{InventoryItemID}_{startingAmount}_{delta}
+        var parts = component.Data.CustomId.Split('_');
+        int itemId = int.Parse(parts[1]); // db ledger reference
+        int startingAmount = int.Parse(parts[2]);
+        int delta = int.Parse(parts[3]);
+
+        var result = _inventoryService.ChangeInventoryItemQuantity(itemId, -delta);
+        int? newAmount = result.newAmount;
+
+        if (newAmount == null)
+        {
+            // ERROR
+        }
+
+        //await component.RespondAsync(msg, ephemeral: true);
+        await component.UpdateAsync(msg =>
+        {
+            msg.Content = $"New amount: {newAmount.Value}";
+            // Dont remove the delete components if there is still items left
+            // We should KEEP the delete features, if the player has more items AND if they chose the max amount. If you have lots of items you will do this
+
+            if (!(startingAmount > 25 && delta == 25))
+            {
+                msg.Embed = null;
+                msg.Components = null;
+            }
+            else
+            {
+                // Additions to message content here.
+                InventoryItem item = _inventoryService.GetInventoryItem(itemId);
+                var comps = InventoryManager.Instance.BuildDeleteMenu(item, 0);
+                msg.Components = comps.Value.component;
+            }
+        });
     }
 
     private async Task HandleTransactionButton(SocketMessageComponent component)

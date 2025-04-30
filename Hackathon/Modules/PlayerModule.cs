@@ -31,12 +31,12 @@ public class PlayerModule : ModuleBase
         ) { }
 
     [SlashCommand("profile", "Show your profile")]
-    public async Task GetProfile()
+    public async Task GetProfile(IUser? other = null)
     {
         await DeferAsync(ephemeral: true);
 
         var embed = PlayerProfileManager.Instance.BuildProfileEmbed(
-            Context.User,
+            other ?? Context.User, // other == null ? Context.User: other. This syntax is very cool
             _profileService,
             _playerService
         );

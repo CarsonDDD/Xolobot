@@ -318,10 +318,12 @@ public class InteractionHandler
         }
         else if (component.Data.CustomId.StartsWith("openbuy_"))
         {
+            //sub menu
             await HandleShopBuyMenuOpenButton(component);
         }
         else if (component.Data.CustomId.StartsWith("opensell_"))
         {
+            //sub menu
             await HandleShopSellMenuOpenButton(component);
         }
         else if (component.Data.CustomId.StartsWith("transaction_"))
@@ -330,6 +332,7 @@ public class InteractionHandler
         }
         else if (component.Data.CustomId.StartsWith("opendelete_"))
         {
+            //sub menu
             await HandleOpenDelete(component);
         }
         else if (component.Data.CustomId.StartsWith("delete_"))

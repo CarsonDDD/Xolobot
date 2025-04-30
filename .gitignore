@@ -8,6 +8,7 @@ Hackathon/bin/
 Hackathon/obj/
 Hackathon/.vs/
 Hackathon/.config/
+Hackathon/Managers/MessageManager.cs
 
 # User-specific files
 *.suo

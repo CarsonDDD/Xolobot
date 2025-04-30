@@ -28,8 +28,7 @@ public class PlayerModule : ModuleBase
             openAIService,
             client,
             interaction
-        )
-    { }
+        ) { }
 
     [SlashCommand("profile", "Show your profile")]
     public async Task GetProfile()
@@ -60,10 +59,14 @@ public class PlayerModule : ModuleBase
 
         string filterParam = !string.IsNullOrWhiteSpace(filter) ? filter : "";
 
-        var result = asList ?
-        InventoryManager.Instance.BuildInventoryList(player, filterParam, _profileService, _playerService)
-        :
-        InventoryManager.Instance.BuildInventoryPage(
+        var result = asList
+            ? InventoryManager.Instance.BuildInventoryList(
+                player,
+                filterParam,
+                _profileService,
+                _playerService
+            )
+            : InventoryManager.Instance.BuildInventoryPage(
                 player,
                 pageIndex: 0,
                 _profileService,
@@ -71,8 +74,6 @@ public class PlayerModule : ModuleBase
                 true,
                 filterParam
             );
-
-
 
         if (result == null)
         {
@@ -92,10 +93,7 @@ public class PlayerModule : ModuleBase
         });
     }
 
-    private void ShowPlayerInventoryList(ISocketMessageChannel location, IUser? target = null)
-    {
-
-    }
+    private void ShowPlayerInventoryList(ISocketMessageChannel location, IUser? target = null) { }
 
     /*private void ShowPlayerEmbed(ISocketMessageChannel location, PlayerObject player)
     {

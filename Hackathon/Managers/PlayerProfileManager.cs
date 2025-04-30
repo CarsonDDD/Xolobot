@@ -25,8 +25,14 @@ public class PlayerProfileManager
         if (profile == null)
             return null;
 
+        string discordName = ((user as IGuildUser)?.Nickname ?? user.Username) + "";
         var embed = new EmbedBuilder()
-            .WithAuthor(user)
+            .WithAuthor(author =>
+            {
+                author.IconUrl = user.GetAvatarUrl();
+                author.Url = "https://www.youtube.com/watch?v=uKxyLmbOc0Q";
+                author.Name = discordName;
+            })
             .WithTitle($"{profile.Player.Name}'s Profile")
             .WithThumbnailUrl(profile.Player.ImgUrl)
             .AddField("Gold", profile.Player.Gold.ToString(), true)

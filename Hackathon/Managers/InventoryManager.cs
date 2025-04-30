@@ -51,6 +51,8 @@ public class InventoryManager
         int itemsPerPage = detailed ? 1 : ITEMS_PER_PAGE;
         var pagedItems = items.Skip(pageIndex * itemsPerPage).Take(itemsPerPage);
         ItemStack? displayedItem = pagedItems.First();
+        if(displayedItem == null) return null;
+
         string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Inventory";
         string baseId = $"inventory_{detailed}_{user.Id}";
 

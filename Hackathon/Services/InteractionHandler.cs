@@ -14,16 +14,10 @@ namespace Hackathon.Services;
 
 public class InteractionHandler
 {
-    public class BotResponseArgs : EventArgs
+    public class BotResponseArgs(SocketMessage message, String response) : EventArgs
     {
-        public SocketMessage SocketMessage { get; set; }
-        public String? Response { get; set; }
-
-        public BotResponseArgs(SocketMessage message, String response)
-        {
-            SocketMessage = message;
-            Response = response;
-        }
+        public SocketMessage SocketMessage { get; set; } = message;
+        public String? Response { get; set; } = response;
     }
 
     private readonly DiscordSocketClient _client;

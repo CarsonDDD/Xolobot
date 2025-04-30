@@ -5,17 +5,11 @@ using Hackathon.Entities;
 
 namespace Hackathon.Services;
 
-public class PlayerService
+public class PlayerService(DatabaseService db, DiscordSocketClient discord)
 {
-    private readonly DatabaseService _db;
+    private readonly DatabaseService _db = db;
 
-    private readonly DiscordSocketClient _client;
-
-    public PlayerService(DatabaseService db, DiscordSocketClient discord)
-    {
-        _db = db;
-        _client = discord;
-    }
+    private readonly DiscordSocketClient _client = discord;
 
     public Player? GetById(int id)
     {

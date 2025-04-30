@@ -4,14 +4,9 @@ using Hackathon.Entities;
 
 namespace Hackathon.Services;
 
-public class InventoryService
+public class InventoryService(DatabaseService db)
 {
-    private readonly DatabaseService _db;
-
-    public InventoryService(DatabaseService db)
-    {
-        _db = db;
-    }
+    private readonly DatabaseService _db = db;
 
     public Inventory? GetInventoryForPlayer(int playerId)
     {

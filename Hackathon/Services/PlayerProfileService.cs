@@ -4,14 +4,9 @@ using Hackathon.Entities;
 
 namespace Hackathon.Services;
 
-public class PlayerProfileService
+public class PlayerProfileService(DatabaseService db)
 {
-    private readonly DatabaseService _db;
-
-    public PlayerProfileService(DatabaseService db)
-    {
-        _db = db;
-    }
+    private readonly DatabaseService _db = db;
 
     public PlayerProfile? GetProfile(int playerId)
     {

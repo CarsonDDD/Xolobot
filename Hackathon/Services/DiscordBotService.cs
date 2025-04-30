@@ -7,28 +7,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Hackathon.Services;
 
-public class DiscordBotService : IHostedService
+public class DiscordBotService(
+    DiscordSocketClient client,
+    InteractionService interactions,
+    IConfiguration config,
+    ILogger<DiscordBotService> logger,
+    InteractionHandler interactionHandler
+    ) : IHostedService
 {
-    private readonly DiscordSocketClient _client;
-    private readonly InteractionService _interactions;
-    private readonly IConfiguration _config;
-    private readonly ILogger _logger;
-    private readonly InteractionHandler _interactionHandler;
-
-    public DiscordBotService(
-        DiscordSocketClient client,
-        InteractionService interactions,
-        IConfiguration config,
-        ILogger<DiscordBotService> logger,
-        InteractionHandler interactionHandler
-    )
-    {
-        _client = client;
-        _interactions = interactions;
-        _config = config;
-        _logger = logger;
-        _interactionHandler = interactionHandler;
-    }
+    private readonly DiscordSocketClient _client = client;
+    private readonly InteractionService _interactions = interactions;
+    private readonly IConfiguration _config = config;
+    private readonly ILogger _logger = logger;
+    private readonly InteractionHandler _interactionHandler = interactionHandler;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {

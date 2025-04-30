@@ -4,7 +4,7 @@ using Hackathon.Entities;
 
 namespace Hackathon.Services;
 
-public class ShopService
+public class ShopService(DatabaseService db)
 {
     public enum ShopResult
     {
@@ -15,12 +15,7 @@ public class ShopService
         UnknownError,
     }
 
-    private readonly DatabaseService _db;
-
-    public ShopService(DatabaseService db)
-    {
-        _db = db;
-    }
+    private readonly DatabaseService _db = db;
 
     /// <summary>
     /// Executes a transaction to transfer an item from the seller to the buyer,

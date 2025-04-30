@@ -9,27 +9,25 @@ using Microsoft.Extensions.Logging;
 namespace Hackathon.Modules;
 
 [Group("player", "Commands assosiated with YOU!")]
-public class PlayerModule : ModuleBase
-{
-    public PlayerModule(
-        ILogger<ModuleBase> logger,
-        DatabaseService sqliteDbService,
-        PlayerService playerService,
-        PlayerProfileService profileService,
-        OpenAIService openAIService,
-        DiscordSocketClient client,
-        InteractionHandler interaction
+public class PlayerModule(
+    ILogger<ModuleBase> logger,
+    DatabaseService sqliteDbService,
+    PlayerService playerService,
+    PlayerProfileService profileService,
+    OpenAIService openAIService,
+    DiscordSocketClient client,
+    InteractionHandler interaction
+)
+    : ModuleBase(
+        logger,
+        sqliteDbService,
+        playerService,
+        profileService,
+        openAIService,
+        client,
+        interaction
     )
-        : base(
-            logger,
-            sqliteDbService,
-            playerService,
-            profileService,
-            openAIService,
-            client,
-            interaction
-        ) { }
-
+{
     [SlashCommand("profile", "Show your profile")]
     public async Task GetProfile(IUser? other = null)
     {

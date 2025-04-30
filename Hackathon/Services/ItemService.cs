@@ -4,15 +4,9 @@ using Hackathon.Entities;
 
 namespace Hackathon.Services;
 
-public class ItemService
+public class ItemService(DatabaseService db)
 {
-    private readonly DatabaseService _db;
-
-    // USED FOR GENERAL LOOSE ITEMS REFERCING THE LEDGER, IF YOU WANT TO LOOK FOR ITEMS IN AN INVENTORY USE InventoryService
-    public ItemService(DatabaseService db)
-    {
-        _db = db;
-    }
+    private readonly DatabaseService _db = db;
 
     public Item? GetById(int itemId)
     {

@@ -15,18 +15,11 @@ namespace Hackathon.Services;
 
 public class OpenAIService
 {
-    public class ResponseGenerationArgs : EventArgs
+    public class ResponseGenerationArgs(String prompt, String response) : EventArgs
     {
-        public string Prompt { get; set; }
-        public string OriginalPrompt { get; }
-        public String? Response { get; set; }
-
-        public ResponseGenerationArgs(String prompt, String response) //maybe user who make the request?!?!?
-        {
-            OriginalPrompt = (String)prompt.Clone();
-            Prompt = prompt;
-            Response = response;
-        }
+        public string Prompt { get; set; } = prompt;
+        public string OriginalPrompt { get; } = (String)prompt.Clone();
+        public String? Response { get; set; } = response;
     }
 
     public delegate void ResponseGenerationEvent(object sender, ResponseGenerationArgs e);

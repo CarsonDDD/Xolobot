@@ -13,27 +13,25 @@ using MongoDB.Driver;
 namespace Hackathon.Modules;
 
 [Group("shop", "commands for interacting with xolobot")]
-public class ShopModule : ModuleBase
-{
-    public ShopModule(
-        ILogger<ModuleBase> logger,
-        DatabaseService sqliteDbService,
-        PlayerService playerService,
-        PlayerProfileService profileService,
-        OpenAIService openAIService,
-        DiscordSocketClient client,
-        InteractionHandler interaction
+public class ShopModule(
+    ILogger<ModuleBase> logger,
+    DatabaseService sqliteDbService,
+    PlayerService playerService,
+    PlayerProfileService profileService,
+    OpenAIService openAIService,
+    DiscordSocketClient client,
+    InteractionHandler interaction
+)
+    : ModuleBase(
+        logger,
+        sqliteDbService,
+        playerService,
+        profileService,
+        openAIService,
+        client,
+        interaction
     )
-        : base(
-            logger,
-            sqliteDbService,
-            playerService,
-            profileService,
-            openAIService,
-            client,
-            interaction
-        ) { }
-
+{
     [SlashCommand("buy", "Buy item from the shop")]
     public async Task Buy(string? searchTerm = null)
     {

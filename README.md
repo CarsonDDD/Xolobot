@@ -10,15 +10,15 @@ Final todo before in a semi-polished usable state where I can abandon the projec
     - [ ] add messages (not AI just yet)
     - [ ] Better confirmation messages
 - [ ] Markup/Markdown when buying/selling
-- [ ] Find a way to deal with message clutter
+- [x] Find a way to deal with message clutter
     - [x] Edit/delete messages instead of sending new ones
 - [x] Trash/remove item
     - [x] 2 step. have drop down to allow for amount.
 - [ ] redo items inside db to be real
-- [ ] Basic Admin features
+- [x] Basic Admin features
     - [ ] Have some Admin state so we can make changes to the following.
         - [ ] A player can only sell their OWN items
-        - [ ] A player can only open their OWN inventory
+        - [x] A player can only open their OWN inventory
     - [ ] tbd
 - [ ] add proper readme + db schema
 

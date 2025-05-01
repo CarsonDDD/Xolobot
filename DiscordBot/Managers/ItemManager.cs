@@ -25,7 +25,7 @@ public class ItemManager
             .WithAuthor(author =>
             {
                 author.IconUrl = user.GetAvatarUrl();
-                author.Url = "https://www.youtube.com/watch?v=uKxyLmbOc0Q";
+                author.Url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
                 author.Name = authorName;
             })
             .WithTitle(
@@ -56,7 +56,7 @@ public class ItemManager
             .WithAuthor(author =>
             {
                 author.IconUrl = embedAuthor.GetAvatarUrl();
-                author.Url = "https://www.youtube.com/watch?v=uKxyLmbOc0Q";
+                author.Url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
                 author.Name = authorName;
             })
             .WithTitle(itemStack.Item.DbReference.Name)

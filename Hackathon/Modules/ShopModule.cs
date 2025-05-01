@@ -3,6 +3,7 @@ using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Hackathon.DomainObjects;
+using Hackathon.Managers;
 using Hackathon.Managers.Shop;
 using Hackathon.Services;
 using Hackathon.Utility;
@@ -141,6 +142,12 @@ public class ShopModule(
         }
 
         var (embed, components) = result.Value;
-        await FollowupAsync(embed: embed, components: components);
+        await FollowupAsync(
+            text: XolotbobManager.Instance.XolobobResponse(
+                "Welcome to my shop!\nHere are my items!"
+            ),
+            embed: embed,
+            components: components
+        );
     }
 }

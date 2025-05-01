@@ -5,6 +5,7 @@ using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Hackathon.Entities;
+using Hackathon.Managers;
 using Hackathon.Managers.Inventory;
 using Hackathon.Managers.Shop;
 using Microsoft.Extensions.Logging;
@@ -162,6 +163,7 @@ public class InteractionHandler
         {
             msg.Embed = embed;
             msg.Components = components;
+            msg.Content = XolotbobManager.Instance.XolobobResponse("new amount selected:" + amount);
         });
     }
 
@@ -226,6 +228,9 @@ public class InteractionHandler
 
         await component.UpdateAsync(msg =>
         {
+            msg.Content = XolotbobManager.Instance.XolobobResponse(
+                $"new item to sell: {selectedItem.Item.DbReference.Name}\nAmount:{startingAmount}"
+            );
             msg.Embed = embed;
             msg.Components = components;
         });
@@ -292,6 +297,9 @@ public class InteractionHandler
 
         await component.UpdateAsync(msg =>
         {
+            msg.Content = XolotbobManager.Instance.XolobobResponse(
+                $"new item to buy: {shopItem.Item.DbReference.Name}\nAmount:{startingAmount}"
+            );
             msg.Embed = embed;
             msg.Components = components;
         });
@@ -372,7 +380,14 @@ public class InteractionHandler
         }
 
         var (embed, components) = result.Value;
-        await component.RespondAsync(embed: embed, components: components, ephemeral: true);
+        await component.RespondAsync(
+            text: XolotbobManager.Instance.XolobobResponse(
+                "Are you sure you want to delete that?\nSelect how many"
+            ),
+            embed: embed,
+            components: components,
+            ephemeral: true
+        );
         //await component.RespondAsync("You are tryna delete something", ephemeral: true);
 
         return;
@@ -397,21 +412,29 @@ public class InteractionHandler
         //await component.RespondAsync(msg, ephemeral: true);
         await component.UpdateAsync(msg =>
         {
-            msg.Content = $"New amount: {newAmount.Value}";
             // Dont remove the delete components if there is still items left
             // We should KEEP the delete features, if the player has more items AND if they chose the max amount. If you have lots of items you will do this
 
             if (!(startingAmount > 25 && delta == 25))
             {
+                // Full delete, remove prompt
                 msg.Embed = null;
                 msg.Components = null;
+                msg.Content = XolotbobManager.Instance.XolobobResponse(
+                    $"Item Deleted\nNew amount: {newAmount.Value}"
+                );
             }
             else
             {
+                // The user may want to continue, dont remove prompt
                 // Additions to message content here.
                 InventoryItem item = _inventoryService.GetInventoryItem(itemId);
                 var comps = InventoryManager.Instance.BuildDeleteMenu(item, 0);
                 msg.Components = comps.Value.component;
+
+                msg.Content = XolotbobManager.Instance.XolobobResponse(
+                    $"Item Deleted\nNew amount: {newAmount.Value}\nDo you want to delete more?"
+                );
             }
         });
     }
@@ -496,7 +519,7 @@ public class InteractionHandler
 
             await component.UpdateAsync(msg =>
             {
-                msg.Content = "Items changed!";
+                msg.Content = XolotbobManager.Instance.XolobobResponse("Transaction occured!");
                 msg.Components = null;
                 msg.Embed = null;
                 // Update existing component instead of using respond.
@@ -563,7 +586,12 @@ public class InteractionHandler
         }
 
         var (embed, components) = result.Value;
-        await component.RespondAsync(embed: embed, components: components, ephemeral: true);
+        await component.RespondAsync(
+            text: XolotbobManager.Instance.XolobobResponse("First time open on item sell"),
+            embed: embed,
+            components: components,
+            ephemeral: true
+        );
 
         /*var (embed, components) = result.Value;
 
@@ -629,7 +657,12 @@ public class InteractionHandler
         }
 
         var (embed, components) = result.Value;
-        await component.RespondAsync(embed: embed, components: components, ephemeral: true);
+        await component.RespondAsync(
+            text: XolotbobManager.Instance.XolobobResponse("First time open on item select"),
+            embed: embed,
+            components: components,
+            ephemeral: true
+        );
 
         return;
     }

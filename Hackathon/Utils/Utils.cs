@@ -23,10 +23,8 @@ public class Utils
 
         if (!string.IsNullOrWhiteSpace(filterString))
         {
-            filterString = filterString.Replace("_", ""); // sanitize
-
             terms = filterString
-                .Replace("_", "")
+                .Replace("_", "") // sanitize
                 .Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries)
                 .Select(t => t.Trim())
                 .ToArray();

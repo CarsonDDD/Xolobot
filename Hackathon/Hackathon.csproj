@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationIcon>Xolobob.ico</ApplicationIcon>
+    <NoWarn>$(NoWarn);CS8618</NoWarn>
+    <NoWarn>$(NoWarn);CS8600</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="Xolobob.ico" />

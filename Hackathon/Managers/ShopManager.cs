@@ -106,8 +106,7 @@ public class ShopManager
     )
     {
         // At the end, we must somehow delete the shop message or something. Or have a retry if fail saying either the item no longer exists/already bought or the quanity changed.
-        if (shopKeeper == null)
-            throw new ArgumentNullException(nameof(shopKeeper));
+        ArgumentNullException.ThrowIfNull(shopKeeper);
 
         InventoryWithItems shopItems = shopKeeper.Inventory.FilteredInventory(filter);
 
@@ -203,7 +202,6 @@ public class ShopManager
                 disabled: !canTransact || (currentAmountSelected <= 0)
             );
         }
-
         return (embed.Build(), builder.Build());
     }
 

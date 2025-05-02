@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using Discord;
 using Hackathon.DomainObjects;
 using Hackathon.Utility;
@@ -174,9 +175,26 @@ public class ItemManager
 
         // item selector dropdown
         var itemOptions = new List<SelectMenuOptionBuilder>();
-        int maxItem = Math.Min(25, inventory.Items.Count); // Discord max is 25
+        //int maxItem = Math.Min(25, inventory.Items.Count); // Discord max is 25*/
 
-        for (int i = 0; i < maxItem; i++)
+        const int windowSize = 25;
+        const int windowCenter = windowSize / 2;
+
+        int currentIndex = inventory.Items.FindIndex(s =>
+            s.Item.DbReference.Id == currentItem.Item.DbReference.Id
+        );
+
+        int startIndex = currentIndex - windowCenter;
+        if (startIndex < 0)
+            startIndex = 0; // clamp low
+        if (startIndex + windowSize > inventory.Items.Count) // clamp high
+            startIndex = Math.Max(0, inventory.Items.Count - windowSize);
+
+
+        int endIndex = Math.Min(startIndex + windowSize, inventory.Items.Count);
+
+        // Have the current be around the middle then propagate both sides until we have 25 items
+        for (int i = startIndex; i < endIndex; i++)
         {
             string itemName = inventory.Items[i].Item.DbReference.Name;
             int itemId = inventory.Items[i].Item.DbReference.Id;
@@ -193,11 +211,13 @@ public class ItemManager
             string safeDescription =
                 rawDescription.Length > 100 ? rawDescription.Substring(0, 100) : rawDescription;
 
+
             itemOptions.Add(
                 new SelectMenuOptionBuilder(
-                    label: itemName,
+                    label: $"{i + 1}. {itemName}", // prefix on desc to show that things shift
                     description: safeDescription,
-                    value: itemSelectorCustomId.Replace("{i}", itemId.ToString())
+                    value: itemSelectorCustomId.Replace("{i}", itemId.ToString()),
+                    isDefault: itemId == currentItem.Item.DbReference.Id
                 )
             );
         }

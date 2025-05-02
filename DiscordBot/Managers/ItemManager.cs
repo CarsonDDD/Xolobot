@@ -42,7 +42,11 @@ public class ItemManager
         //display.AddField("Amount:", itemStack.DbMeta.Amount, true);
         //display.AddField("Cost", $"{itemStack.DbMeta.ActualCost} gp", true);
         //display.AddField("Weight", itemStack.Item.DbReference.Weight.ToString(), true);
-        display.AddField(itemStack.Item.DbReference.ShortDescription, "‎ " + "\n", false);
+        display.AddField(
+            itemStack.Item.DbReference.ShortDescription,
+            "-# Weight: " + itemStack.Item.DbReference.Weight.ToString(),
+            false
+        );
 
         return display;
     }
@@ -69,6 +73,11 @@ public class ItemManager
 
         display.AddField("Price-Per-Unit:", itemStack.DbMeta.ActualCost + "gp", true);
         display.AddField("{total}:", itemStack.DbMeta.ActualCost * quantity + "gp", true);
+        /*display.AddField(
+            "Total Weight:",
+            itemStack.Item.DbReference.Weight * quantity + "lbs",
+            true
+        );*/
 
         return display;
     }
@@ -192,13 +201,13 @@ public class ItemManager
     }*/
 
     public ComponentBuilder CreateItemSelector(
-       InventoryWithItems inventory,
-       ItemStack currentItem,
-       string itemSelectorMenuCustomId,
-       string itemSelectorCustomId,
-       string quantitySelectorMenuCustomId,
-       string quantitySelectorCustomId,
-       int currentQuantity
+        InventoryWithItems inventory,
+        ItemStack currentItem,
+        string itemSelectorMenuCustomId,
+        string itemSelectorCustomId,
+        string quantitySelectorMenuCustomId,
+        string quantitySelectorCustomId,
+        int currentQuantity
     )
     {
         ComponentBuilder menus = new ComponentBuilder();
@@ -241,8 +250,6 @@ public class ItemManager
         return menus;
     }
 
-
-
     public SelectMenuBuilder CreateQuantitySelector(
         string customIdMenuTemplate,
         string customIdSelectorTemplate,
@@ -268,5 +275,4 @@ public class ItemManager
             .WithOptions(quantityOptions)
             .WithPlaceholder(currentQuantity > 0 ? currentQuantity.ToString() : "Select Quantity");
     }
-
 }

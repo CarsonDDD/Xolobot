@@ -32,6 +32,8 @@ public class ShopManager
     private const int SHOP_DB_ID = 2; // Fake player ID---xolobots id
     public static ulong SHOP_DISCORD_ID = 1190800169411809360; // this is ugly
 
+    public static float SHOP_MULTIPLIER = 0.3f;
+
     private const int ITEMS_PER_SHOP_PAGE = 3;
     private const string SHOP_NAME = "**Magic store**";
     private const string BUY_HELP_TEXT = "To view an item to purchase, use /shop view <item>";

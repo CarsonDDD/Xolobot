@@ -41,7 +41,7 @@ public class Utils
         var textInfo = CultureInfo.InvariantCulture.TextInfo;
 
         return !items.Any()
-            ? "-# > ***Nothing***"
+            ? "-# ***Nothing***"
             : string.Join(
                 '\n',
                 items

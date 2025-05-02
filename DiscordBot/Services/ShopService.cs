@@ -1,6 +1,7 @@
 using System.Data;
 using Dapper;
 using Hackathon.Entities;
+using Hackathon.Managers.Shop;
 
 namespace Hackathon.Services;
 
@@ -24,6 +25,10 @@ public class ShopService(DatabaseService db)
     /// For a "buy" operation, giverDiscordId should be the shopkeeper's Discord ID
     /// (the seller) and takerDiscordId the buyer's Discord ID.
     /// </summary>
+    ///
+    // TODO: Figure out markup/price change calculation. Currently everything uses the itemstacks value and not the base value.
+    // For simplicity, (and for mvp), we can ignore the baseBalue, having a fixed multipler which changes the item value when in a players vs shop inventory.
+    // Later we can use the baseValue when we do hangling (there are many issues with this with item stacks and loops probably)
     public async Task<ShopResult> ExecuteTransaction(
         string type,
         string giverDiscordId,
@@ -168,7 +173,22 @@ public class ShopService(DatabaseService db)
             }
 
             // ADJUST PRICE!!!!!!
-            int newActualCost = (int)(sellerInvItem.ActualCost * 1); // TODO: This should be above one depending on if the TYPE of transaction and if the shopkeeper is involced
+            float multipler = 1f;
+            if (buyer.DiscordId == ShopManager.SHOP_DISCORD_ID.ToString())
+            {
+                // Item goes into shop
+                multipler = 1 + ShopManager.SHOP_MULTIPLIER;
+            }
+            else
+            {
+                //item goes into player
+                multipler = 1 - ShopManager.SHOP_MULTIPLIER;
+            }
+
+            int newActualCost = (int)(sellerInvItem.ActualCost * multipler); // TODO: This should be above one depending on if the TYPE of transaction and if the shopkeeper is involced
+            // Current fixed system:
+            // Into player inv= lower value (AFTER PURCHASE AND TRANSFER)
+            // Into shop inv = increase value (AFTER PURCHASE AND TRANSFER)
             await conn.ExecuteAsync(
                 "UPDATE InventoryItem SET actualCost = @newActualCost WHERE inventory_id = @inventoryId AND item_id = @itemId",
                 new

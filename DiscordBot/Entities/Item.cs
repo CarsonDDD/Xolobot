@@ -8,6 +8,6 @@ public class Item
     public string? LongDescription { get; set; }
     public string? Lore { get; set; }
     public int BaseCost { get; set; }
-    public double Weight { get; set; }
+    public double? Weight { get; set; }
     public string? ImgUrl { get; set; }
 }

@@ -21,7 +21,7 @@ public class ItemManager
     {
         string tagsField = itemStack.Item.Tags.Any()
             ? $">>> {Utils.FormatUIList(itemStack.Item.Tags.Select(t => t.Label))}"
-            : "";
+            : ">>> ";
 
         EmbedBuilder display = new EmbedBuilder()
             .WithAuthor(author =>
@@ -35,16 +35,28 @@ public class ItemManager
             )
             .WithDescription(tagsField)
             .WithFooter(footer)
-            .WithImageUrl(itemStack.Item.DbReference.ImgUrl)
+            .WithImageUrl(
+                itemStack.Item.DbReference.ImgUrl
+                    ?? "https://www.wargamer.com/wp-content/sites/wargamer/2024/10/dnd-worst-gnome-rejected.jpg"
+            )
             //.WithThumbnailUrl(itemStack.Item.DbReference.ImgUrl)
             .WithColor(Color.Purple);
 
         //display.AddField("Amount:", itemStack.DbMeta.Amount, true);
         //display.AddField("Cost", $"{itemStack.DbMeta.ActualCost} gp", true);
         //display.AddField("Weight", itemStack.Item.DbReference.Weight.ToString(), true);
+
+        var weight = itemStack.Item.DbReference.Weight;
+        string weightString = weight switch
+        {
+            null => "NONE",
+            < 0 => "?",
+            _ => weight.ToString(),
+        };
+
         display.AddField(
-            itemStack.Item.DbReference.ShortDescription,
-            "-# Weight: " + itemStack.Item.DbReference.Weight.ToString(),
+            itemStack.Item.DbReference.ShortDescription ?? "‎ ",
+            "-# Weight: " + weightString,
             false
         );
 
@@ -67,7 +79,10 @@ public class ItemManager
             })
             .WithTitle(itemStack.Item.DbReference.Name)
             .WithDescription(itemStack.Item.DbReference.LongDescription ?? "No description.")
-            .WithThumbnailUrl(itemStack.Item.DbReference.ImgUrl ?? "")
+            .WithThumbnailUrl(
+                itemStack.Item.DbReference.ImgUrl
+                    ?? "https://www.wargamer.com/wp-content/sites/wargamer/2024/10/dnd-worst-gnome-rejected.jpg"
+            )
             .WithFooter("footer")
             .WithColor(Color.Purple);
 
@@ -143,62 +158,6 @@ public class ItemManager
 
         return (embed, builder);
     }
-
-    /*public ComponentBuilder CreateItemSelector(
-        InventoryWithItems inventory,
-        ItemStack currentItem,
-        string itemSelectorMenuCustomId,
-        string itemSelectorCustomId,
-        string quanitySelectorMenuCustomId,
-        string quanitySelectorCustomId,
-        int currentQuantity
-    )
-    {
-        ComponentBuilder menus = new ComponentBuilder();
-
-        // item selector
-        var itemSelector = new List<SelectMenuOptionBuilder>();
-        int maxItem = Math.Min(25, inventory.Items.Count); // 25 is max
-        for (int i = 0; i < maxItem; i++)
-        {
-            string itemName = inventory.Items[i].Item.DbReference.Name;
-            int itemId = inventory.Items[i].Item.DbReference.Id;
-            //opensell_{non-componentInteractorDisocrdID}_{itemId}_0_{filterParam} // 0 as starting amount
-            itemSelector.Add(
-                new SelectMenuOptionBuilder(
-                    label: itemName,
-                    description: string.Join(", ", inventory.Items[i].Item.Tags),
-                    value: itemSelectorCustomId.Replace("{i}", itemId.ToString())
-                )
-            );
-        }
-        menus.WithSelectMenu(
-            customId: itemSelectorMenuCustomId,
-            options: itemSelector,
-            placeholder: currentItem.Item.DbReference.Name
-        );
-
-        // generate amount list.
-        var quantityOptions = new List<SelectMenuOptionBuilder>();
-        int maxQuant = Math.Min(25, currentItem.DbMeta.Amount); // 25 is max
-        for (int i = 0; i < maxQuant; i++)
-        {
-            //opensell_{non-componentInteractorDisocrdID}_{itemId}_{quantity}_{filterParam}
-            quantityOptions.Add(
-                new SelectMenuOptionBuilder(
-                    label: (i + 1).ToString(),
-                    value: quanitySelectorCustomId.Replace("{i}", (i + 1).ToString())
-                )
-            );
-        }
-        menus.WithSelectMenu(
-            customId: quanitySelectorMenuCustomId,
-            options: quantityOptions,
-            placeholder: currentQuantity > 0 ? currentQuantity.ToString() : "Select Quantity"
-        );
-
-        return menus;
-    }*/
 
     public ComponentBuilder CreateItemSelector(
         InventoryWithItems inventory,

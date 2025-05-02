@@ -65,6 +65,8 @@ public class InteractionHandler
         // events
         _client.ButtonExecuted += ButtonHandler;
         _client.SelectMenuExecuted += SelectMenuHandler;
+
+        //_client.Rest.DeleteAllGlobalCommandsAsync(); // TODO: REMOVE LATER
     }
 
     public async Task InitializeAsync()

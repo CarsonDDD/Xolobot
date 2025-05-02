@@ -176,8 +176,6 @@ public class ItemManager
         var itemOptions = new List<SelectMenuOptionBuilder>();
         int maxItem = Math.Min(25, inventory.Items.Count); // Discord max is 25
 
-        var textInfo = System.Globalization.CultureInfo.CurrentCulture.TextInfo;
-
         for (int i = 0; i < maxItem; i++)
         {
             string itemName = inventory.Items[i].Item.DbReference.Name;
@@ -186,7 +184,7 @@ public class ItemManager
             // Description limit is 100 character
             string rawDescription = string.Join(
                 ", ",
-                inventory.Items[i].Item.Tags.Select(tag => textInfo.ToTitleCase(tag.Label))
+                inventory.Items[i].Item.Tags.Select(tag => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(tag.Label))
             );
             string safeDescription =
                 rawDescription.Length > 100 ? rawDescription.Substring(0, 100) : rawDescription;

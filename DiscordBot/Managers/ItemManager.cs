@@ -1,6 +1,6 @@
 using Discord;
-using DnsClient.Protocol;
 using Hackathon.DomainObjects;
+using Hackathon.Utility;
 
 namespace Hackathon.Managers;
 
@@ -19,7 +19,9 @@ public class ItemManager
         string footer
     )
     {
-        string? tags = itemStack.Item.Tags.Any() ? string.Join(", ", itemStack.Item.Tags) : null;
+        string tagsField = itemStack.Item.Tags.Any()
+            ? $">>> {Utils.FormatUIList(itemStack.Item.Tags.Select(t => t.Label))}"
+            : "";
 
         EmbedBuilder display = new EmbedBuilder()
             .WithAuthor(author =>
@@ -29,9 +31,9 @@ public class ItemManager
                 author.Name = authorName;
             })
             .WithTitle(
-                $"{(itemStack.DbMeta.Amount > 1 ? $"({itemStack.DbMeta.Amount}) " : "")}{itemStack.Item.DbReference.Name} — *{itemStack.DbMeta.ActualCost}gp*"
+                $"{(itemStack.DbMeta.Amount > 1 ? $"({itemStack.DbMeta.Amount}) " : "")}**{itemStack.Item.DbReference.Name}** — ***{itemStack.DbMeta.ActualCost}gp***"
             )
-            .WithDescription(tags == null ? "" : $"> *{tags}*")
+            .WithDescription(tagsField)
             .WithFooter(footer)
             .WithImageUrl(itemStack.Item.DbReference.ImgUrl)
             //.WithThumbnailUrl(itemStack.Item.DbReference.ImgUrl)
@@ -40,7 +42,7 @@ public class ItemManager
         //display.AddField("Amount:", itemStack.DbMeta.Amount, true);
         //display.AddField("Cost", $"{itemStack.DbMeta.ActualCost} gp", true);
         //display.AddField("Weight", itemStack.Item.DbReference.Weight.ToString(), true);
-        display.AddField("Description:", itemStack.Item.DbReference.LongDescription + "\n", false);
+        display.AddField(itemStack.Item.DbReference.ShortDescription, "‎ " + "\n", false);
 
         return display;
     }

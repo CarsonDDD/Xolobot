@@ -36,7 +36,8 @@ public class PlayerModule(
         var embed = PlayerProfileManager.Instance.BuildProfileEmbed(
             other ?? Context.User, // other == null ? Context.User: other. This syntax is very cool
             _profileService,
-            _playerService
+            _playerService,
+            other == null || Context.Guild.GetUser(Context.User.Id).GuildPermissions.ManageGuild
         );
 
         if (embed == null)
@@ -65,7 +66,7 @@ public class PlayerModule(
     {
         await DeferAsync(ephemeral: true); // can be either
 
-        var player = target == null ? Context.User : target;
+        var player = target ?? Context.User;
 
         string filterParam = !string.IsNullOrWhiteSpace(filter) ? filter : "";
 

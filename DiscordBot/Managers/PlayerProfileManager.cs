@@ -14,7 +14,8 @@ public class PlayerProfileManager
     public Embed? BuildProfileEmbed(
         IUser user,
         PlayerProfileService profileService,
-        PlayerService playerService
+        PlayerService playerService,
+        bool showGold
     )
     {
         var player = playerService.GetByDiscordId(user.Id.ToString());
@@ -35,13 +36,26 @@ public class PlayerProfileManager
             })
             .WithTitle($"{profile.Player.Name}'s Profile")
             .WithThumbnailUrl(profile.Player.ImgUrl)
-            .AddField("Gold", profile.Player.Gold.ToString(), true)
-            .AddField("Classes", string.Join(", ", profile.Classes.Select(c => c.Label)), true)
+            .AddField("Gold", showGold ? profile.Player.Gold.ToString(): "Unknown", true)
+            .AddField(
+                "Classes",
+                profile.Classes.Count != 0
+                    ? string.Join(", ", profile.Classes.Select(c => c.Label))
+                    : "Nothing",
+                true
+            )
             .AddField("Races", string.Join(", ", profile.Races.Select(r => r.Label)), true)
-            .AddField("Languages", string.Join(", ", profile.Languages.Select(l => l.Label)))
+            .AddField(
+                "Languages",
+                profile.Languages.Count != 0
+                    ? "> *" + string.Join(", ", profile.Languages.Select(l => l.Label)) + "*"
+                    : "> *Nothing*"
+            )
             .AddField(
                 "Proficiencies",
-                string.Join(", ", profile.Proficiencies.Select(p => p.Label))
+                profile.Proficiencies.Count != 0
+                    ? "> *" + string.Join(", ", profile.Proficiencies.Select(p => p.Label)) + "*"
+                    : "> *Nothing*"
             )
             .WithFooter(
                 "Stats\n:" + string.Join("\n", profile.Stats.Select(s => $"{s.Label}: {s.Value}"))

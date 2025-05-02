@@ -29,7 +29,10 @@ public class PlayerModule(
     )
 {
     [SlashCommand("profile", "Show your profile")]
-    public async Task GetProfile(IUser? other = null)
+    public async Task GetProfile(
+        [Summary(description: "Look into specific users profile. @'t the user.")]
+            IUser? other = null
+    )
     {
         await DeferAsync(ephemeral: true);
 
@@ -51,7 +54,13 @@ public class PlayerModule(
 
     [DefaultMemberPermissions(GuildPermission.Administrator)]
     [SlashCommand("inventory", "Display your inventory")]
-    public async Task GetInventoryBasic(bool asList = false, string? filter = null)
+    public async Task GetInventoryBasic(
+        [Summary(description: "Show inventory compact list")] bool asList = false,
+        [Summary(
+            description: "Seperate multiple filters using a comma. Ex: `filter1, filter two`."
+        )]
+            string? filter = null
+    )
     {
         await GetInventoryAdmin(asList, filter, null);
     }
@@ -59,9 +68,13 @@ public class PlayerModule(
     [DefaultMemberPermissions(GuildPermission.Administrator)]
     [SlashCommand("peak", "Look into any inventory")]
     public async Task GetInventoryAdmin(
-        bool asList = false,
-        string? filter = null,
-        IUser? target = null
+        [Summary(description: "Show inventory compact list")] bool asList = false,
+        [Summary(
+            description: "Seperate multiple filters using a comma. Ex: `filter1, filter two`."
+        )]
+            string? filter = null,
+        [Summary(description: "Look into specific users inventory. @'t the user.")]
+            IUser? target = null
     )
     {
         await DeferAsync(ephemeral: true); // can be either

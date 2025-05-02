@@ -33,8 +33,11 @@ public class ShopModule(
         interaction
     )
 {
-    [SlashCommand("buy", "Buy item from the shop")]
-    public async Task Buy(string? searchTerm = null)
+    [SlashCommand("buy", "Open Buy Menu for an item from the shop")]
+    public async Task Buy(
+        [Summary(description: "Will give options for multiple search results.")]
+            string? searchTerm = null
+    )
     {
         // open buy menu. No raw commands!
         // verify item, if not exist, tell user and default to first item
@@ -76,8 +79,11 @@ public class ShopModule(
         await FollowupAsync(embed: embed, components: components, ephemeral: true);
     }
 
-    [SlashCommand("sell", "Sell an item from your inventory")]
-    public async Task Sell(string? searchTerm = null)
+    [SlashCommand("sell", "Open Sell Menu for an item from your inventory")]
+    public async Task Sell(
+        [Summary(description: "Will give options for multiple search results.")]
+            string? searchTerm = null
+    )
     {
         // open buy menu. No raw commands!
         // verify item, if not exist, tell user and default to first item
@@ -117,8 +123,13 @@ public class ShopModule(
         await FollowupAsync(embed: embed, components: components, ephemeral: true);
     }
 
-    [SlashCommand("open", "Open the shop interface")]
-    public async Task OpenShop(string? filter = null)
+    [SlashCommand("open", "Open the large shop interface")]
+    public async Task OpenShop(
+        [Summary(
+            description: "Seperate multiple filters using a comma. Ex: `filter1, filter two`."
+        )]
+            string? filter = null
+    )
     {
         await DeferAsync();
 

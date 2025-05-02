@@ -51,7 +51,8 @@ public class InventoryManager
         int itemsPerPage = detailed ? 1 : ITEMS_PER_PAGE;
         var pagedItems = items.Skip(pageIndex * itemsPerPage).Take(itemsPerPage);
         ItemStack? displayedItem = pagedItems.First();
-        if(displayedItem == null) return null;
+        if (displayedItem == null)
+            return null;
 
         string authorName = ((user as IGuildUser)?.Nickname ?? user.Username) + "'s Inventory";
         string baseId = $"inventory_{detailed}_{user.Id}";
@@ -114,23 +115,42 @@ public class InventoryManager
                 new ComponentBuilder().Build()
             );
         }
-
+        string discordName = ((user as IGuildUser)?.Nickname ?? user.Username) + "";
         EmbedBuilder embedBuilder = new EmbedBuilder()
-            .WithTitle($"{user.Username}'s Inventory")
-            .WithDescription("Here are the items:")
+            .WithTitle($"{profile.Player.Name}'s Inventory")
+            .WithAuthor(author =>
+            {
+                author.IconUrl = user.GetAvatarUrl();
+                author.Url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+                author.Name = discordName;
+            })
+            /* .WithDescription("Here are the items:")*/
             .WithColor(Color.DarkBlue);
 
         if (!string.IsNullOrWhiteSpace(filter))
             embedBuilder.WithFooter("Showing results for: '" + filter + "'");
 
-        StringBuilder itemListBuilder = new StringBuilder();
+        // Display items. Max field len in 1024 chars, so we will take a good guess to split them
+        int itemsPerField = 10;
+        int totalItems = items.Count;
+        int fieldCount = (int)Math.Ceiling(totalItems / (double)itemsPerField);
 
-        foreach (var item in items)
+        for (int i = 0; i < fieldCount; i++)
         {
-            itemListBuilder.AppendLine($"- **{item.Item.DbReference.Name}** x{item.DbMeta.Amount}");
-        }
+            var chunk = items.Skip(i * itemsPerField).Take(itemsPerField);
 
-        embedBuilder.AddField("Items:", itemListBuilder.ToString());
+            var fieldText = new StringBuilder();
+            foreach (var item in chunk)
+            {
+                fieldText.AppendLine($"- **{item.Item.DbReference.Name}** x{item.DbMeta.Amount}");
+            }
+
+            embedBuilder.AddField(
+                name: $"༺ Items {(fieldCount > 1 ? $"(Page {i + 1})" : "")} ༻",
+                value: fieldText.ToString(),
+                true
+            );
+        }
 
         MessageComponent components = new ComponentBuilder().Build();
 

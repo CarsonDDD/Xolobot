@@ -184,7 +184,11 @@ public class ItemManager
             // Description limit is 100 character
             string rawDescription = string.Join(
                 ", ",
-                inventory.Items[i].Item.Tags.Select(tag => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(tag.Label))
+                inventory
+                    .Items[i]
+                    .Item.Tags.Select(tag =>
+                        CultureInfo.CurrentCulture.TextInfo.ToTitleCase(tag.Label)
+                    )
             );
             string safeDescription =
                 rawDescription.Length > 100 ? rawDescription.Substring(0, 100) : rawDescription;

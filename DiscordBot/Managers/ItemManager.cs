@@ -56,7 +56,7 @@ public class ItemManager
         };
 
         display.AddField(
-            itemStack.Item.DbReference.ShortDescription ?? "‎ ",
+            itemStack.Item.DbReference.ShortDescription ?? "No Short Description",
             "-# Weight: " + weightString,
             false
         );

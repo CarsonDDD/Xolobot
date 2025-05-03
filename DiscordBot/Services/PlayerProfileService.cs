@@ -26,9 +26,8 @@ public class PlayerProfileService(DatabaseService db)
             .ToList();
 
         var classes = conn.Query<Class>(
-                @"SELECT c.* FROM PlayerClass pc
-              JOIN Class c ON c.id = pc.class_id
-              WHERE pc.player_id = @id",
+                @"SELECT * FROM Class
+                 WHERE player_id = @id",
                 new { id = playerId }
             )
             .ToList();

@@ -38,5 +38,3 @@ Inventories are private and can only been seen by the correct player; users with
 
 
 # DB Diagram
-
-![alt text](image.png)

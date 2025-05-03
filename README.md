@@ -5,21 +5,38 @@ Old revitalized hackathon project.
 Most the direct DB interaction is or started as AI-gen because I value the health of my fingers and couldnt be bothered to manually convert from mongo to sql.
 
 Final todo before in a semi-polished usable state where I can abandon the project:
-- [x] show inv as simple list with quantity---used for knowledge when playing. not any asthetics, or shop view
-- [ ] xolobot text/speaking messages
-    - [ ] add messages (not AI just yet)
-    - [ ] Better confirmation messages
-- [ ] Markup/Markdown when buying/selling
-- [x] Find a way to deal with message clutter
-    - [x] Edit/delete messages instead of sending new ones
-- [x] Trash/remove item
-    - [x] 2 step. have drop down to allow for amount.
-- [ ] redo items inside db to be real
-- [x] Basic Admin features
-    - [ ] Have some Admin state so we can make changes to the following.
-        - [ ] A player can only sell their OWN items
-        - [x] A player can only open their OWN inventory
-    - [ ] tbd
 - [ ] add proper readme + db schema
+- [ ] build instructions
 
-![](WIP.gif)
+
+# Demos
+
+## Shop Interaction
+
+### Shop open
+![](shop-open.gif)
+
+### Selecting an item
+![](shop-select.gif)
+
+### Skip the shop menu
+
+It is slow to navigate the items in the shop one by one. Using this opens a dropdown for faster navigation. In the future the normal view will either be merged with this or removed entirely for this. 
+
+![](direct-buy.gif)
+
+## Player Data
+
+Inventory can either be displayed as a basic text list or as the same view from the shop---giving the option to either sell the item, or delete the item (ex: you used a potion, so you must delete it from your inventory later.)
+
+Inventories are private and can only been seen by the correct player; users with server admin can look and sell from any inventory.
+
+![](inventory.gif)
+
+
+![](profile.gif)
+
+
+# DB Diagram
+
+![alt text](image.png)

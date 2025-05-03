@@ -17,7 +17,7 @@ Create `appsettings.json` in `./DiscordBot` and give it the proper keys
 }
 ```
 
-Have `database.db` either in `./DiscordBot` or located properly so it can be acessed with `./DiscordBot`
+Rename `xolobotEXAMPLE.db` to `xolobot.db`. Make sure its located properly so it can be acessed with `./xolobot.db`
 
 
 

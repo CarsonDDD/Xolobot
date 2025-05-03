@@ -6,18 +6,11 @@ Most the direct DB interaction is or started as AI-gen because I value the healt
 
 # How to Run:
 
-Create `appsettings.json` in `./DiscordBot` and give it the proper keys
-```json
-{
-  "Secrets": {
-    "OpenAI": "",
-    "Discord": ""
-  },
-  "System-prompt": "You are xolobot"
-}
-```
+Rename `appsettingsEXAMPLE.json` to `appsettings.json` and set the api keys.
 
 Rename `xolobotEXAMPLE.db` to `xolobot.db`. Make sure its located properly so it can be acessed with `./xolobot.db`
+
+Run
 
 
 
